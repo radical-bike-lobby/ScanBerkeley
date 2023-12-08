@@ -41,13 +41,13 @@
             "shortName": "Berkeley",
             "talkgroupsFile": "talkgroups.csv",
             "unitTagsFile": "UnitTags.csv",
-			"recordUnknown": "false",
+			"recordUnknown": false,
             "squelch": -50,
             "modulation": "qpsk",
             "logLevel": "debug",
 			"audioArchive": true,
 			"callLog": true,
-			"uploadScript": "/home/stephanbh/trunk-build/transcribe.sh"
+			"uploadScript": "/app/transcribe.sh"
         }
     ],
     "plugins": [

@@ -1,4 +1,4 @@
-DEC,HEX,Mode,Alpha Tag,Description,Tag,Group,Priority
+Decimal,Hex,Mode,Alpha Tag,Description,Tag,Category,Priority
 2105,839,D,Berkeley FD1,Fire Dispatch 1,Fire Dispatch,Berkeley,1
 2106,83a,D,Berkeley FD2,Fire Dispatch 2,Fire Dispatch,Berkeley,1
 2112,840,D,Berkeley FD Emer,Fire Emergency,Emergency Ops,Berkeley,1
