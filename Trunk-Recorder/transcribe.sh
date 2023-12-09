@@ -12,7 +12,7 @@ fi
 SYSTEM="$(jq -r '.short_name' $json)"
 TALKGROUP="$(jq -r '.talkgroup' $json)"
 FILENAME="$(basename $wav)"
-FILEPATH="$SYSTEM\\$TALKGROUP\\$FILENAME"
+FILEPATH="$SYSTEM/$TALKGROUP/$FILENAME"
 # Call too short to be transcribed
 if [[ "$(jq -r '.call_length' $json)" -lt "${MIN_CALL_LENGTH:-2}" ]]; then
   exit
