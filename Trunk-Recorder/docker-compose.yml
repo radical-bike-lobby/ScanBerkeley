@@ -1,0 +1,16 @@
+version: '2.1'
+services:
+  recorder:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.template
+    container_name: trunk-recorder
+    restart: always
+    privileged: true
+    labels:
+      io.balena.features.supervisor-api: '1'
+      io.balena.features.dbus: '1'
+      io.balena.features.kernel-modules: '1'
+      io.balena.features.sysfs: '1'
+    environment:
+      DBUS_SYSTEM_BUS_ADDRESS: "unix:path=/host/run/dbus/system_bus_socket"
