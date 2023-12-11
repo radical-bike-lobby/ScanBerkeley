@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -44,6 +45,7 @@ func main() {
 
 	uploader := s3manager.NewUploader(s3Session)
 
+	//
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		data := map[string]string{
 			"Region": os.Getenv("FLY_REGION"),
@@ -81,7 +83,8 @@ func main() {
 			case "call_json":
 				// TODO: write metadata to sqlite
 			case "call_audio":
-				if err = transcribeAndUpload(r.Context(), client, uploader, filepath, p); err != nil {
+				err = transcribeAndUpload(r.Context(), client, uploader, filepath, p)
+				if err != nil {
 					writeErr(w, err)
 					return
 				}
@@ -93,29 +96,32 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
+// transcribeAndUpload persists the audio file to S3 and transcribes it with openai Whisper
 func transcribeAndUpload(ctx context.Context, client *audio.Client, uploader *s3manager.Uploader, key string, reader io.Reader) error {
-	read, write := io.Pipe()
-	defer write.Close()
-
-	teeReader := io.TeeReader(reader, write)
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
+	read, write := io.Pipe()
+	teeReader := io.TeeReader(reader, write)
+	defer write.Close()
+	defer io.Copy(ioutil.Discard, teeReader)
+
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
-		msg, err := transcribe(ctx, client, read)
+		msg, err := whisper(ctx, client, teeReader)
 		if err != nil {
 			fmt.Println("Error invoking transcribe: ", err.Error())
 		} else {
-			fmt.Println("transcription success: ", msg)
+			fmt.Println(key+": ", msg)
 		}
 	}()
-	return uploadS3(ctx, uploader, key, teeReader)
+	return uploadS3(ctx, uploader, key, read)
 }
 
-func transcribe(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
+// transcribeAndUpload transcribes the audio with openai Whisper
+func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
 	resp, err := client.CreateTranscription(ctx, &audio.CreateTranscriptionParams{
 		Language:    "en",
 		Audio:       reader,
@@ -127,6 +133,7 @@ func transcribe(ctx context.Context, client *audio.Client, reader io.Reader) (st
 	return resp.Text, nil
 }
 
+// transcribeAndUpload uploads the audio to S3
 func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, reader io.Reader) error {
 	input := &s3manager.UploadInput{
 		Bucket:      aws.String("scanner-berkeley"),         // bucket's name
@@ -135,6 +142,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 		ContentType: aws.String("application/octet-stream"), // content type
 	}
 	_, err := uploader.UploadWithContext(ctx, input)
+	fmt.Println("done uploading")
 	return err
 }
 

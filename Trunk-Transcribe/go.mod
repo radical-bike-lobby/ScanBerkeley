@@ -1,4 +1,4 @@
-module github.com/fly-apps/go-example
+module github.com/radical-bike-lobby/trunk-transcribe
 
 go 1.18
 
@@ -7,4 +7,7 @@ require (
 	github.com/rakyll/openai-go v1.0.9
 )
 
-require github.com/jmespath/go-jmespath v0.4.0 // indirect
+require (
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/sashabaranov/go-openai v1.17.9 // indirect
+)
