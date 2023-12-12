@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -11,8 +12,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -26,6 +29,31 @@ import (
 var resources embed.FS
 
 var t = template.Must(template.ParseFS(resources, "templates/*"))
+
+type Config struct {
+	client   *audio.Client
+	uploader *s3manager.Uploader
+}
+
+type Metadata struct {
+	Freq              int64  `json:"freq:omitempty"`
+	StartTime         int64  `json:"start_time,omitempty"`
+	StopTime          int64  `json:"stop_time,omitempty"`
+	Emergency         int64  `json:"emergency,omitempty"`
+	Priority          int64  `json:"priority,omitempty"`
+	Mode              int64  `json:"mode,omitempty"`
+	Duplex            int64  `json:"duplex,omitempty"`
+	Encrypted         int64  `json:"encrypted,omitempty"`
+	CallLength        int64  `json:"call_length,omitempty"`
+	Talkgroup         int64  `json:"talkgroup,omitempty"`
+	TalkgroupTag      string `json:"talkgroup_tag,omitempty"`
+	TalkGroupDesc     string `json:"talkgroup_description,omitempty"`
+	TalkGroupGroupTag string `json:"talkgroup_group_tag,omitempty"`
+	TalkGroupGroup    string `json:"talkgroup_group,omitempty"`
+	AudioType         string `json:"audio_type,omitempty"`
+	ShortName         string `json:"short_name,omitempty"`
+	AudioText         string `json:"audio_text,omitempty"`
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -45,79 +73,81 @@ func main() {
 
 	uploader := s3manager.NewUploader(s3Session)
 
-	//
+	config := &Config{
+		client:   client,
+		uploader: uploader,
+	}
+
+	// Homepage
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		data := map[string]string{
 			"Region": os.Getenv("FLY_REGION"),
 		}
-
 		t.ExecuteTemplate(w, "index.html.tmpl", data)
 	})
 
+	// transribe endpoint
 	http.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
-
-		filepath := r.URL.Query().Get("filepath")
-		if filepath == "" {
-			writeErr(w, errors.New("missing filepath query param"))
-			return
-		}
-
-		reader, err := r.MultipartReader()
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20+512)
+		msg, err := handleTranscription(r.Context(), config, r)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
-		for {
-			p, err := reader.NextPart()
-			switch err {
-			case io.EOF:
-				return
-			case nil:
-			default:
-				writeErr(w, err)
-				return
-			}
-
-			fmt.Println("processing form value: " + p.FormName())
-			switch strings.ToLower(p.FormName()) {
-			case "call_json":
-				// TODO: write metadata to sqlite
-			case "call_audio":
-				err = transcribeAndUpload(r.Context(), client, uploader, filepath, p)
-				if err != nil {
-					writeErr(w, err)
-					return
-				}
-			}
-		}
+		http.ServeContent(w, r, "", time.Now(), strings.NewReader(msg))
 	})
 
 	log.Println("listening on", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
+func handleTranscription(ctx context.Context, config *Config, r *http.Request) (string, error) {
+
+	err := r.ParseMultipartForm(1 << 20)
+	if err != nil {
+		return "", err
+	}
+	js, _, err := r.FormFile("call_json")
+	if err != nil {
+		return "", err
+	}
+	defer js.Close()
+	callJson, _ := ioutil.ReadAll(js)
+
+	file, header, err := r.FormFile("call_audio")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	var meta Metadata
+	err = json.Unmarshal(callJson, &meta)
+	if err != nil {
+		return "", err
+	}
+	filename := filepath.Base(header.Filename)
+	filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
+	msg, err := transcribeAndUpload(r.Context(), config, filepath, file, meta)
+	if err != nil {
+		return "", err
+	}
+	return msg, nil
+}
+
 // transcribeAndUpload persists the audio file to S3 and transcribes it with openai Whisper
-func transcribeAndUpload(ctx context.Context, client *audio.Client, uploader *s3manager.Uploader, key string, reader io.Reader) error {
+func transcribeAndUpload(ctx context.Context, config *Config, key string, reader io.Reader, metadata Metadata) (string, error) {
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	data, _ := ioutil.ReadAll(reader)
 
-	read, write := io.Pipe()
-	teeReader := io.TeeReader(reader, write)
-	defer write.Close()
-	defer io.Copy(ioutil.Discard, teeReader)
+	msg, err := whisper(ctx, config.client, bytes.NewReader(data))
+	if err == nil {
+		fmt.Println(key+": ", msg)
+	}
 
-	go func() {
-		wg.Add(1)
-		defer wg.Done()
-		msg, err := whisper(ctx, client, teeReader)
-		if err != nil {
-			fmt.Println("Error invoking transcribe: ", err.Error())
-		} else {
-			fmt.Println(key+": ", msg)
-		}
-	}()
-	return uploadS3(ctx, uploader, key, read)
+	metadata.AudioText = msg
+	uploadS3(ctx, config.uploader, key, bytes.NewReader(data), metadata)
+
+	return msg, err
 }
 
 // transcribeAndUpload transcribes the audio with openai Whisper
@@ -134,11 +164,20 @@ func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (strin
 }
 
 // transcribeAndUpload uploads the audio to S3
-func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, reader io.Reader) error {
+func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, reader io.Reader, meta Metadata) error {
+
+	s3Meta := make(map[string]*string)
+	s3Meta["audio-text"] = aws.String(meta.AudioText)
+	s3Meta["short-name"] = aws.String(meta.ShortName)
+	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
+	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
+	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))
+
 	input := &s3manager.UploadInput{
 		Bucket:      aws.String("scanner-berkeley"),         // bucket's name
 		Key:         aws.String(key),                        // files destination location
 		Body:        reader,                                 // content of the file
+		Metadata:    s3Meta,                                 // metadata
 		ContentType: aws.String("application/octet-stream"), // content type
 	}
 	_, err := uploader.UploadWithContext(ctx, input)

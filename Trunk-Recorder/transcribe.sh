@@ -18,10 +18,10 @@ if [[ "$(jq -r '.call_length' $json)" -lt "${MIN_CALL_LENGTH:-2}" ]]; then
   exit
 fi
 
-API_BASE_URL="https://trunk-transcribe.fly.dev"
+API_BASE_URL="https://trunk-transcribe.fly.dev "
 # API_KEY="REDACTED_CHANGE_ME"
 
 echo "Submitting $FILEPATH for transcription"
-curl -v --connect-timeout 1 --form call_audio=@$wav --form call_json=@$json "$API_BASE_URL/transcribe?filepath=$FILEPATH"  &>/dev/null &
+curl -v --connect-timeout 1 --form call_audio=@$wav --form call_json=@$json "$API_BASE_URL/transcribe"  &>/dev/null &
 disown
 # We run the curl command as a background process and disown it to not hang up trunk-recorder.

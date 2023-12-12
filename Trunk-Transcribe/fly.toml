@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for trunk-transcribe on 2023-12-08T14:16:42-08:00
+# fly.toml app configuration file generated for trunk-transcribe on 2023-12-11T13:00:19-08:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -12,6 +12,11 @@ primary_region = "sjc"
 
 [env]
   PORT = "8080"
+
+[[mounts]]
+  source = "litefs"
+  destination = "/var/lib/litefs"
+  auto_extend_size_threshold = 0
 
 [http_service]
   internal_port = 8080
