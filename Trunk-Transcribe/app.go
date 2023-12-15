@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,6 +25,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/rakyll/openai-go"
 	"github.com/rakyll/openai-go/audio"
+	"github.com/slack-go/slack"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:embed templates/*
@@ -31,28 +35,10 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	client   *audio.Client
-	uploader *s3manager.Uploader
-}
-
-type Metadata struct {
-	Freq              int64  `json:"freq:omitempty"`
-	StartTime         int64  `json:"start_time,omitempty"`
-	StopTime          int64  `json:"stop_time,omitempty"`
-	Emergency         int64  `json:"emergency,omitempty"`
-	Priority          int64  `json:"priority,omitempty"`
-	Mode              int64  `json:"mode,omitempty"`
-	Duplex            int64  `json:"duplex,omitempty"`
-	Encrypted         int64  `json:"encrypted,omitempty"`
-	CallLength        int64  `json:"call_length,omitempty"`
-	Talkgroup         int64  `json:"talkgroup,omitempty"`
-	TalkgroupTag      string `json:"talkgroup_tag,omitempty"`
-	TalkGroupDesc     string `json:"talkgroup_description,omitempty"`
-	TalkGroupGroupTag string `json:"talkgroup_group_tag,omitempty"`
-	TalkGroupGroup    string `json:"talkgroup_group,omitempty"`
-	AudioType         string `json:"audio_type,omitempty"`
-	ShortName         string `json:"short_name,omitempty"`
-	AudioText         string `json:"audio_text,omitempty"`
+	openaiClient *audio.Client
+	uploader     *s3manager.Uploader
+	slackClient  *slack.Client
+	webhookUrl   string
 }
 
 func main() {
@@ -61,10 +47,28 @@ func main() {
 		port = "8080"
 
 	}
+	// slack setup
+
+	// https://hooks.slack.com/services/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
+	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
+	slackapiSecret := os.Getenv("SLACK_API_SECRET")
+	var api *slack.Client
+	if slackapiSecret == "" || webhookUrl == "" {
+		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
+	} else {
+		api = slack.New(slackapiSecret)
+	}
+
+	// openai setup
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+	if openaiKey == "" {
+		log.Fatalf("Missing OPENAI_API_KEY")
+	}
 
 	s := openai.NewSession(os.Getenv("OPENAI_API_KEY"))
-	client := audio.NewClient(s, "")
+	openaiCli := audio.NewClient(s, "")
 
+	// s3 setup
 	s3Config := &aws.Config{
 		Region:      aws.String("us-west-2"),
 		Credentials: credentials.NewEnvCredentials(),
@@ -74,8 +78,10 @@ func main() {
 	uploader := s3manager.NewUploader(s3Session)
 
 	config := &Config{
-		client:   client,
-		uploader: uploader,
+		openaiClient: openaiCli,
+		uploader:     uploader,
+		slackClient:  api,
+		webhookUrl:   webhookUrl,
 	}
 
 	// Homepage
@@ -84,6 +90,17 @@ func main() {
 			"Region": os.Getenv("FLY_REGION"),
 		}
 		t.ExecuteTemplate(w, "index.html.tmpl", data)
+	})
+
+	http.HandleFunc("/audio", func(w http.ResponseWriter, r *http.Request) {
+		link := r.URL.Query()["link"]
+		if len(link) < 1 {
+			writeErr(w, errors.New("link not provided"))
+		}
+		data := map[string]string{
+			"Link": path.Join("https://dxjjyw8z8j16s.cloudfront.net", link[0]),
+		}
+		t.ExecuteTemplate(w, "audio.html.tmpl", data)
 	})
 
 	// transribe endpoint
@@ -139,14 +156,21 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 
 	data, _ := ioutil.ReadAll(reader)
 
-	msg, err := whisper(ctx, config.client, bytes.NewReader(data))
+	msg, err := whisper(ctx, config.openaiClient, bytes.NewReader(data))
 	if err == nil {
 		fmt.Println(key+": ", msg)
 	}
 
 	metadata.AudioText = msg
-	uploadS3(ctx, config.uploader, key, bytes.NewReader(data), metadata)
-
+	metadata.URL = fmt.Sprintf("Audio: <https://trunk-transcribe.fly.dev/audio?link=%s>", key)
+	wg, gctx := errgroup.WithContext(ctx)
+	wg.Go(func() error {
+		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
+	})
+	wg.Go(func() error {
+		return postToSlack(gctx, config, metadata)
+	})
+	err = wg.Wait()
 	return msg, err
 }
 
@@ -166,12 +190,15 @@ func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (strin
 // transcribeAndUpload uploads the audio to S3
 func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, reader io.Reader, meta Metadata) error {
 
+	b, _ := json.Marshal(meta)
+
 	s3Meta := make(map[string]*string)
 	s3Meta["audio-text"] = aws.String(meta.AudioText)
 	s3Meta["short-name"] = aws.String(meta.ShortName)
 	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
 	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
 	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))
+	s3Meta["meta"] = aws.String(string(b))
 
 	input := &s3manager.UploadInput{
 		Bucket:      aws.String("scanner-berkeley"),         // bucket's name
@@ -185,7 +212,147 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
+func postToSlack(ctx context.Context, config *Config, meta Metadata) error {
+	if config.slackClient == nil {
+		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
+		return nil
+	}
+	if meta.AudioText == "" {
+		log.Println("Empty audio text. Eliding slack post")
+		return nil
+	}
+
+	blocks := strings.Split(meta.AudioText, ".")
+
+	for i, block := range blocks {
+		if i >= len(meta.SrcList) {
+			break
+		}
+		src := meta.SrcList[i]
+		tag := src.Tag
+		if tag == "" {
+			tag = strconv.FormatInt(src.Src, 10)
+		}
+		blocks[i] = tag + ": " + block
+	}
+
+	blocks = append(blocks, fmt.Sprintf("%s", meta.URL))
+	sentances := strings.Join(blocks, "\n")
+
+	attachment := slack.Attachment{
+		Color:         "good",
+		Fallback:      "You successfully posted by Incoming Webhook URL!",
+		AuthorName:    meta.TalkgroupTag,
+		AuthorSubname: meta.TalkGroupDesc,
+		AuthorLink:    "https://github.com/radical-bike-lobby",
+		AuthorIcon:    "https://avatars.githubusercontent.com/u/153021490",
+		Text:          sentances,
+		Footer:        fmt.Sprintf("%d seconds", meta.CallLength),
+		ThumbURL:      meta.URL,
+		Ts:            json.Number(strconv.FormatInt(time.Now().Unix(), 10)),
+	}
+	msg := slack.WebhookMessage{
+		Attachments: []slack.Attachment{attachment},
+	}
+
+	err := slack.PostWebhookContext(ctx, config.webhookUrl, &msg)
+	return err
+}
+
 func writeErr(w http.ResponseWriter, err error) {
 	fmt.Println("Error: ", err.Error())
 	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+// Structures to parse json of the form:
+//
+//	{
+//	  "freq": 772693750,
+//	  "start_time": 1702513859,
+//	  "stop_time": 1702513867,
+//	  "emergency": 0,
+//	  "priority": 4,
+//	  "mode": 0,
+//	  "duplex": 0,
+//	  "encrypted": 0,
+//	  "call_length": 6,
+//	  "talkgroup": 3105,
+//	  "talkgroup_tag": "Berkeley PD1",
+//	  "talkgroup_description": "Police Dispatch",
+//	  "talkgroup_group_tag": "Law Dispatch",
+//	  "talkgroup_group": "Berkeley",
+//	  "audio_type": "digital",
+//	  "short_name": "Berkeley",
+//	  "freqList": [
+//	    {
+//	      "freq": 772693750,
+//	      "time": 1702513859,
+//	      "pos": 0,
+//	      "len": 1.08,
+//	      "error_count": "100",
+//	      "spike_count": "7"
+//	    },
+//	    {
+//	      "freq": 772693750,
+//	      "time": 1702513862,
+//	      "pos": 1.08,
+//	      "len": 3.78,
+//	      "error_count": "21",
+//	      "spike_count": "1"
+//	    },
+//	  ],
+//	  "srcList": [
+//	    {
+//	      "src": 3113003,
+//	      "time": 1702513859,
+//	      "pos": 0,
+//	      "emergency": 0,
+//	      "signal_system": "",
+//	      "tag": "Dispatch"
+//	    },
+//	    {
+//	      "src": 3124119,
+//	      "time": 1702513862,
+//	      "pos": 1.08,
+//	      "emergency": 0,
+//	      "signal_system": "",
+//	      "tag": ""
+//	    },
+//	  ]
+//	}
+type Frequency struct {
+	Freq int64   `json:"freq,omitempty"`
+	Time int64   `json:"time,omitempty"`
+	Pos  float64 `json:"pos,omitempty"`
+}
+type Source struct {
+	Src          int64   `json:"src,omitempty"`
+	Time         int64   `json:"time,omitempty"`
+	Pos          float64 `json:"pos,omitempty"`
+	Emergency    int64   `json:"emergency,omitempty"`
+	SignalSystem string  `json:"signal_system,omitempty"`
+	Tag          string  `json:"tag,omitempty"`
+}
+
+type Metadata struct {
+	Freq              int64       `json:"freq,omitempty"`
+	StartTime         int64       `json:"start_time,omitempty"`
+	StopTime          int64       `json:"stop_time,omitempty"`
+	Emergency         int64       `json:"emergency,omitempty"`
+	Priority          int64       `json:"priority,omitempty"`
+	Mode              int64       `json:"mode,omitempty"`
+	Duplex            int64       `json:"duplex,omitempty"`
+	Encrypted         int64       `json:"encrypted,omitempty"`
+	CallLength        int64       `json:"call_length,omitempty"`
+	Talkgroup         int64       `json:"talkgroup,omitempty"`
+	TalkgroupTag      string      `json:"talkgroup_tag,omitempty"`
+	TalkGroupDesc     string      `json:"talkgroup_description,omitempty"`
+	TalkGroupGroupTag string      `json:"talkgroup_group_tag,omitempty"`
+	TalkGroupGroup    string      `json:"talkgroup_group,omitempty"`
+	AudioType         string      `json:"audio_type,omitempty"`
+	ShortName         string      `json:"short_name,omitempty"`
+	AudioText         string      `json:"audio_text,omitempty"`
+	URL               string      `json:"url,omitempty"`
+	SrcList           []Source    `json:"srcList,omitempty"`
+	FreqList          []Frequency `json:"freqList,omitempty"`
 }
