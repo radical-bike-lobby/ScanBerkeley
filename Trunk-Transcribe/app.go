@@ -47,9 +47,8 @@ func main() {
 		port = "8080"
 
 	}
-	// slack setup
 
-	// https://hooks.slack.com/services/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
+	// slack setup
 	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
 	slackapiSecret := os.Getenv("SLACK_API_SECRET")
 	var api *slack.Client
