@@ -12,9 +12,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
-	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,10 @@ import (
 	"github.com/rakyll/openai-go/audio"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
+)
+
+var (
+	puncRegex = regexp.MustCompile("[\\.\\!\\?;]\\s+")
 )
 
 //go:embed templates/*
@@ -83,27 +88,42 @@ func main() {
 		webhookUrl:   webhookUrl,
 	}
 
-	// Homepage
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := NewMux(config)
+
+	log.Println("listening on", port)
+	log.Fatal(http.ListenAndServe(":"+port, mux))
+}
+
+// NewMux creates a new ServeMux router
+func NewMux(config *Config) *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		data := map[string]string{
 			"Region": os.Getenv("FLY_REGION"),
 		}
 		t.ExecuteTemplate(w, "index.html.tmpl", data)
 	})
 
-	http.HandleFunc("/audio", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/audio", func(w http.ResponseWriter, r *http.Request) {
 		link := r.URL.Query()["link"]
 		if len(link) < 1 {
 			writeErr(w, errors.New("link not provided"))
+			return
+		}
+
+		result, err := url.JoinPath("https://dxjjyw8z8j16s.cloudfront.net", link[0])
+		if err != nil {
+			writeErr(w, err)
+			return
 		}
 		data := map[string]string{
-			"Link": path.Join("https://dxjjyw8z8j16s.cloudfront.net", link[0]),
+			"Link": result,
 		}
 		t.ExecuteTemplate(w, "audio.html.tmpl", data)
 	})
 
-	// transribe endpoint
-	http.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20+512)
 		msg, err := handleTranscription(r.Context(), config, r)
 		if err != nil {
@@ -113,8 +133,7 @@ func main() {
 		http.ServeContent(w, r, "", time.Now(), strings.NewReader(msg))
 	})
 
-	log.Println("listening on", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	return mux
 }
 
 func handleTranscription(ctx context.Context, config *Config, r *http.Request) (string, error) {
@@ -150,7 +169,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) (
 	return msg, nil
 }
 
-// transcribeAndUpload persists the audio file to S3 and transcribes it with openai Whisper
+// transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, reader io.Reader, metadata Metadata) (string, error) {
 
 	data, _ := ioutil.ReadAll(reader)
@@ -161,7 +180,8 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 	}
 
 	metadata.AudioText = msg
-	metadata.URL = fmt.Sprintf("Audio: <https://trunk-transcribe.fly.dev/audio?link=%s>", key)
+	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
+
 	wg, gctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
 		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
@@ -173,7 +193,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 	return msg, err
 }
 
-// transcribeAndUpload transcribes the audio with openai Whisper
+// whisper transcribes the audio with openai Whisper
 func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
 	resp, err := client.CreateTranscription(ctx, &audio.CreateTranscriptionParams{
 		Language:    "en",
@@ -235,19 +255,18 @@ func postToSlack(ctx context.Context, config *Config, meta Metadata) error {
 		blocks[i] = tag + ": " + block
 	}
 
-	blocks = append(blocks, fmt.Sprintf("%s", meta.URL))
+	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
 	sentances := strings.Join(blocks, "\n")
 
 	attachment := slack.Attachment{
 		Color:         "good",
-		Fallback:      "You successfully posted by Incoming Webhook URL!",
+		Fallback:      meta.AudioText,
 		AuthorName:    meta.TalkgroupTag,
 		AuthorSubname: meta.TalkGroupDesc,
 		AuthorLink:    "https://github.com/radical-bike-lobby",
 		AuthorIcon:    "https://avatars.githubusercontent.com/u/153021490",
 		Text:          sentances,
 		Footer:        fmt.Sprintf("%d seconds", meta.CallLength),
-		ThumbURL:      meta.URL,
 		Ts:            json.Number(strconv.FormatInt(time.Now().Unix(), 10)),
 	}
 	msg := slack.WebhookMessage{

@@ -2,9 +2,13 @@ package main
 
 import (
     "encoding/json"
+    "io/ioutil"
+    "net/http"
+    "net/http/httptest"
     "testing"
 
     "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 var data = `{
@@ -28,6 +32,8 @@ var data = `{
 "srcList": [ {"src": 3124119, "time": 1702617247, "pos": 0.00, "emergency": 0, "signal_system": "", "tag": ""}, {"src": 3113008, "time": 1702617251, "pos": 2.88, "emergency": 0, "signal_system": "", "tag": "Dispatch"} ]
 }`
 
+var filename = "Berkeley/2105/2105-1702705979_772093750.1-call_130267.wav"
+
 func TestUnmarshalMetadata(t *testing.T) {
     var meta Metadata
     err := json.Unmarshal([]byte(data), &meta)
@@ -42,3 +48,84 @@ func TestUnmarshalMetadata(t *testing.T) {
     assert.Equal(t, meta.SrcList[1].Src, int64(3113008), "second source must be correct")
     assert.Equal(t, meta.SrcList[1].Tag, "Dispatch", "second source must be Dispatch")
 }
+
+func TestAudioPlayer(t *testing.T) {
+    mux := NewMux(nil)
+
+    rr := httptest.NewRecorder()
+    req, err := http.NewRequest("GET", "/audio?link="+filename, nil)
+    require.NoError(t, err)
+
+    mux.ServeHTTP(rr, req)
+    assert.Equal(t, 200, rr.Code)
+
+    b, err := ioutil.ReadAll(rr.Body)
+    require.NoError(t, err)
+
+    expect := "https://dxjjyw8z8j16s.cloudfront.net/" + filename
+
+    assert.Contains(t, string(b), expect, string(b)+"\n\nshould contain:\n\n"+expect)
+}
+
+func TestSplitSentance(t *testing.T) {
+    tests := []struct {
+        name     string
+        sentance string
+        expect   []string
+    }{
+        {
+            name:     "question mark",
+            sentance: "114 Control, do you have traffic? Affirm, we have a car on our way",
+            expect: []string{
+                "114 Control, do you have traffic",
+                "Affirm, we have a car on our way",
+            },
+        },
+        {
+            name:     "commas",
+            sentance: "Copy, just confirming southeast corner, Alcatraz and Adelaide. Confirming, it's in the parking lot, it's on the sidewalk, it's out of the roadway",
+            expect: []string{
+                "Copy, just confirming southeast corner, Alcatraz and Adelaide",
+                "Confirming, it's in the parking lot, it's on the sidewalk, it's out of the roadway",
+            },
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            blocks := puncRegex.Split(test.sentance, -1)
+            assert.Equal(t, test.expect, blocks)
+        })
+    }
+}
+
+// func TestTrunkTranscribe(t *testing.T) {
+//     mux := NewMux(nil)
+
+//     rr := httptest.NewRecorder()
+//     req, err := http.NewRequest("POST", "/transcribe", nil)
+//     require.NoError(t, err)
+
+//     mux.ServeHTTP(rr, req)
+//     b, _ := ioutil.ReadAll(rr.Body)
+//     assert.Equal(t, "request Content-Type isn't multipart/form-data\n", string(b))
+
+//     var buf bytes.Buffer
+//     w := multipart.NewWriter(&buf)
+
+//     err = w.WriteField("call_json", data)
+//     require.NoError(t, err)
+
+//     writer, err := w.CreateFormFile("call_audio", filename)
+//     require.NoError(t, err)
+//     _, err = writer.Write([]byte("some audio binary bits"))
+//     require.NoError(t, err)
+//     w.Close()
+//     req, err = http.NewRequest("POST", "/transcribe", &buf)
+//     require.NoError(t, err)
+//     req.Header.Set("Content-Type", w.FormDataContentType())
+
+//     mux.ServeHTTP(rr, req)
+
+//     assert.Equal(t, 200, rr.Code, "recevieved unexpected response: "+string(b))
+// }
