@@ -32,6 +32,9 @@ import (
 
 var (
 	puncRegex = regexp.MustCompile("[\\.\\!\\?;]\\s+")
+	streets   = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "The", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
+	modifiers = []string{"street", "boulevard", "road", "path", "way", "avenue"}
+	terms     = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
 )
 
 //go:embed templates/*
@@ -195,7 +198,9 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 
 // whisper transcribes the audio with openai Whisper
 func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
+	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 	resp, err := client.CreateTranscription(ctx, &audio.CreateTranscriptionParams{
+		Prompt:      prompt,
 		Language:    "en",
 		Audio:       reader,
 		AudioFormat: "wav",

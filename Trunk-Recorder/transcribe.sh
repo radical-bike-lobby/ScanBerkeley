@@ -18,8 +18,7 @@ if [[ "$(jq -r '.call_length' $json)" -lt "${MIN_CALL_LENGTH:-2}" ]]; then
   exit
 fi
 
-API_BASE_URL="https://trunk-transcribe.fly.dev "
-# API_KEY="REDACTED_CHANGE_ME"
+API_BASE_URL="https://trunk-transcribe.fly.dev"
 
 echo "Submitting $FILEPATH for transcription"
 curl -v --connect-timeout 1 --form call_audio=@$wav --form call_json=@$json "$API_BASE_URL/transcribe"  &>/dev/null &

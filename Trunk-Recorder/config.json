@@ -45,23 +45,9 @@
             "squelch": -50,
             "modulation": "qpsk",
             "logLevel": "debug",
-			"audioArchive": true,
-			"callLog": true,
+			"audioArchive": false,
+			"callLog": false,
 			"uploadScript": "/app/transcribe.sh"
-        }
-    ],
-    "plugins": [
-        {
-            "name": "rdioscanner_uploader",
-            "library": "librdioscanner_uploader.so",
-            "server": "http://127.0.0.1:3000",
-            "systems": [
-                {
-                    "shortName": "Berkeley",
-                    "apiKey": "REDACTED_CHANGE_ME",
-                    "systemId": 1
-                }
-            ]
         }
     ]
 }
