@@ -35,6 +35,27 @@ var (
 	streets   = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "The", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers = []string{"street", "boulevard", "road", "path", "way", "avenue"}
 	terms     = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
+
+	//slack user id to keywords map
+	keywordsMap = map[string][]string{
+		// emilies keywords
+		"U06H9NA2L4V": []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "weapon", "versus ped", "versus bike", "bike versus", "pedestrian", "bike", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner"},
+		// naveens
+		"U0531U1RY1W": []string{"cyclist", "bicycle", "bike", "pedestrian", "Rose", "Hopkins", "wheelchair", "highland"},
+		// marc
+		"U03FTUS9SSD": []string{"bike", "bicycle", "cyclist"},
+	}
+
+	defaultChannelID = "C06A28PMXFZ" // #scanner-dispatches
+
+	channelMap = map[int64]string{
+		3605: "C06J8T3EUP9", // UCB PD1 : #scanner-dispatches-ucpd
+		3606: "C06J8T3EUP9", // UCB PD2 : #scanner-dispatches-ucpd
+		3608: "C06J8T3EUP9", // UCB PD4 : #scanner-dispatches-ucpd
+		3609: "C06J8T3EUP9", // UCB PD5 : #scanner-dispatches-ucpd
+	}
+
+	location *time.Location
 )
 
 //go:embed templates/*
@@ -43,10 +64,19 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	openaiClient *audio.Client
-	uploader     *s3manager.Uploader
-	slackClient  *slack.Client
-	webhookUrl   string
+	openaiClient   *audio.Client
+	uploader       *s3manager.Uploader
+	slackClient    *slack.Client
+	webhookUrl     string
+	webhookUrlUCPD string
+}
+
+func init() {
+	var err error
+	location, err = time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
@@ -58,6 +88,7 @@ func main() {
 
 	// slack setup
 	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
+	webhookUrlUCPD := os.Getenv("SLACK_WEBHOOK_URL_UCPD")
 	slackapiSecret := os.Getenv("SLACK_API_SECRET")
 	var api *slack.Client
 	if slackapiSecret == "" || webhookUrl == "" {
@@ -85,10 +116,11 @@ func main() {
 	uploader := s3manager.NewUploader(s3Session)
 
 	config := &Config{
-		openaiClient: openaiCli,
-		uploader:     uploader,
-		slackClient:  api,
-		webhookUrl:   webhookUrl,
+		openaiClient:   openaiCli,
+		uploader:       uploader,
+		slackClient:    api,
+		webhookUrl:     webhookUrl,
+		webhookUrlUCPD: webhookUrlUCPD,
 	}
 
 	mux := NewMux(config)
@@ -180,6 +212,8 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 	msg, err := whisper(ctx, config.openaiClient, bytes.NewReader(data))
 	if err == nil {
 		fmt.Println(key+": ", msg)
+	} else {
+		msg = "Error transcribing text: " + err.Error()
 	}
 
 	metadata.AudioText = msg
@@ -190,7 +224,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, reader
 		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
 	})
 	wg.Go(func() error {
-		return postToSlack(gctx, config, metadata)
+		return postToSlack(gctx, config, key, bytes.NewReader(data), metadata)
 	})
 	err = wg.Wait()
 	return msg, err
@@ -236,7 +270,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
-func postToSlack(ctx context.Context, config *Config, meta Metadata) error {
+func postToSlack(ctx context.Context, config *Config, key string, reader io.Reader, meta Metadata) error {
 	if config.slackClient == nil {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
 		return nil
@@ -246,40 +280,96 @@ func postToSlack(ctx context.Context, config *Config, meta Metadata) error {
 		return nil
 	}
 
-	blocks := strings.Split(meta.AudioText, ".")
+	blocks := strings.Split(meta.AudioText, ". ")
 
 	for i, block := range blocks {
 		if i >= len(meta.SrcList) {
 			break
+		} else if len(block) == 0 {
+			continue
 		}
+
 		src := meta.SrcList[i]
 		tag := src.Tag
 		if tag == "" {
 			tag = strconv.FormatInt(src.Src, 10)
 		}
+		block = strings.TrimSpace(block) + "."
 		blocks[i] = tag + ": " + block
 	}
 
+	// Append mentions
+	var mentions []string
+	lower := strings.ToLower(meta.AudioText)
+	for userID, keywords := range keywordsMap {
+		for _, keyword := range keywords {
+			lowKey := strings.ToLower(keyword)
+			if strings.Contains(lower, lowKey) {
+				mentions = append(mentions, "<@"+userID+">")
+				break
+			}
+		}
+	}
+
+	if str := strings.Join(mentions, " "); len(str) > 0 {
+		blocks = append(blocks, str)
+	}
+	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
 	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
+	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 	sentances := strings.Join(blocks, "\n")
 
-	attachment := slack.Attachment{
-		Color:         "good",
-		Fallback:      meta.AudioText,
-		AuthorName:    meta.TalkgroupTag,
-		AuthorSubname: meta.TalkGroupDesc,
-		AuthorLink:    "https://github.com/radical-bike-lobby",
-		AuthorIcon:    "https://avatars.githubusercontent.com/u/153021490",
-		Text:          sentances,
-		Footer:        fmt.Sprintf("%d seconds", meta.CallLength),
-		Ts:            json.Number(strconv.FormatInt(time.Now().Unix(), 10)),
-	}
-	msg := slack.WebhookMessage{
-		Attachments: []slack.Attachment{attachment},
+	// attachment := slack.Attachment{
+	// 	Color:         "good",
+	// 	Fallback:      meta.AudioText,
+	// 	AuthorName:    meta.TalkgroupTag,
+	// 	AuthorSubname: meta.TalkGroupDesc,
+	// 	AuthorLink:    "https://github.com/radical-bike-lobby",
+	// 	AuthorIcon:    "https://avatars.githubusercontent.com/u/153021490",
+	// 	Text:          sentances,
+	// 	Footer:        fmt.Sprintf("%d seconds", meta.CallLength),
+	// 	Ts:            json.Number(strconv.FormatInt(time.Now().Unix(), 10)),
+	// }
+
+	// determine channel
+	channelID, ok := channelMap[meta.Talkgroup]
+	if !ok {
+		channelID = defaultChannelID
 	}
 
-	err := slack.PostWebhookContext(ctx, config.webhookUrl, &msg)
+	// _, ts, err := config.slackClient.PostMessage(
+	// 	channelID,
+	// 	slack.MsgOptionAttachments(attachment),
+	// 	slack.MsgOptionAsUser(false), // Add this if you want that the bot would post message as a user, otherwise it will send response using the default slackbot
+	// )
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	// upload audio
+	filename := filepath.Base(key)
+	file, err := config.slackClient.UploadFile(slack.FileUploadParameters{
+		Filename:       filename,
+		Filetype:       "auto",
+		Reader:         reader,
+		InitialComment: sentances,
+		Channels:       []string{channelID},
+	})
+	if err != nil {
+		log.Println("Error uploading file to slack: ", err)
+	} else {
+		log.Printf("Uploaded file: %s of type: %s to channel: %v", file.Name, file.Filetype, channelID)
+	}
+
 	return err
+	// url := config.webhookUrl
+	// if ok {
+	// 	url = config.webhookUrlUCPD
+	// }
+	// return slack.PostWebhookContext(ctx, url, &slack.WebhookMessage{
+	// 	Attachments: []slack.Attachment{attachment},
+	// })
 }
 
 func writeErr(w http.ResponseWriter, err error) {
