@@ -161,54 +161,59 @@ func NewMux(config *Config) *http.ServeMux {
 
 	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20+512)
-		msg, err := handleTranscription(r.Context(), config, r)
+		err := handleTranscription(r.Context(), config, r)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
-		http.ServeContent(w, r, "", time.Now(), strings.NewReader(msg))
+		http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
 	})
 
 	return mux
 }
 
-func handleTranscription(ctx context.Context, config *Config, r *http.Request) (string, error) {
+func handleTranscription(ctx context.Context, config *Config, r *http.Request) error {
 
 	err := r.ParseMultipartForm(1 << 20)
 	if err != nil {
-		return "", err
+		return err
 	}
 	js, _, err := r.FormFile("call_json")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer js.Close()
 	callJson, _ := ioutil.ReadAll(js)
 
 	file, header, err := r.FormFile("call_audio")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer file.Close()
+
+	data, _ := ioutil.ReadAll(file)
 
 	var meta Metadata
 	err = json.Unmarshal(callJson, &meta)
 	if err != nil {
-		return "", err
+		return err
 	}
-	filename := filepath.Base(header.Filename)
-	filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
-	msg, err := transcribeAndUpload(r.Context(), config, filepath, file, meta)
-	if err != nil {
-		return "", err
-	}
-	return msg, nil
+
+	// fire goroutine and return to unblock client resources
+	go func() {
+		filename := filepath.Base(header.Filename)
+		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
+		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
+		if err != nil {
+			fmt.Println("Error: ", err.Error())
+		}
+	}()
+
+	return nil
 }
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
-func transcribeAndUpload(ctx context.Context, config *Config, key string, reader io.Reader, metadata Metadata) (string, error) {
-
-	data, _ := ioutil.ReadAll(reader)
+func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
 	msg, err := whisper(ctx, config.openaiClient, bytes.NewReader(data))
 	if err == nil {
@@ -308,33 +313,11 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 	sentances := strings.Join(blocks, "\n")
 
-	// attachment := slack.Attachment{
-	// 	Color:         "good",
-	// 	Fallback:      meta.AudioText,
-	// 	AuthorName:    meta.TalkgroupTag,
-	// 	AuthorSubname: meta.TalkGroupDesc,
-	// 	AuthorLink:    "https://github.com/radical-bike-lobby",
-	// 	AuthorIcon:    "https://avatars.githubusercontent.com/u/153021490",
-	// 	Text:          sentances,
-	// 	Footer:        fmt.Sprintf("%d seconds", meta.CallLength),
-	// 	Ts:            json.Number(strconv.FormatInt(time.Now().Unix(), 10)),
-	// }
-
 	// determine channel
 	channelID, ok := channelMap[meta.Talkgroup]
 	if !ok {
 		channelID = defaultChannelID
 	}
-
-	// _, ts, err := config.slackClient.PostMessage(
-	// 	channelID,
-	// 	slack.MsgOptionAttachments(attachment),
-	// 	slack.MsgOptionAsUser(false), // Add this if you want that the bot would post message as a user, otherwise it will send response using the default slackbot
-	// )
-
-	// if err != nil {
-	// 	return err
-	// }
 
 	// upload audio
 	filename := filepath.Base(key)
@@ -352,13 +335,6 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	}
 
 	return err
-	// url := config.webhookUrl
-	// if ok {
-	// 	url = config.webhookUrlUCPD
-	// }
-	// return slack.PostWebhookContext(ctx, url, &slack.WebhookMessage{
-	// 	Attachments: []slack.Attachment{attachment},
-	// })
 }
 
 // Mentions returns the list of mentions to append corresponding to matching keywords in the
