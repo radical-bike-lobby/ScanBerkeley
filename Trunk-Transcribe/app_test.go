@@ -99,6 +99,52 @@ func TestSplitSentance(t *testing.T) {
     }
 }
 
+func TestMentions(t *testing.T) {
+    tests := []struct {
+        name     string
+        sentance string
+        expect   []string
+    }{
+        {
+            name:     "single",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van",
+            expect:   []string{"<@U06H9NA2L4V>"},
+        },
+        {
+            name:     "multi word match",
+            sentance: "Fancroft and Piedmont,we've got a vehicle versus bike,and we've got an involved party on the phone,we've got BFD and RUN as well",
+            expect:   []string{"<@U06H9NA2L4V>", "<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
+        },
+        {
+            name:     "Capitalized",
+            sentance: "ROSE",
+            expect:   []string{"<@U0531U1RY1W>"},
+        },
+        {
+            name:     "substring",
+            sentance: " It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description.",
+            expect:   nil,
+        },
+        {
+            name:     "rose",
+            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Rose and Shattuck.",
+            expect:   []string{"<@U0531U1RY1W>"},
+        },
+        {
+            name:     "hyphen",
+            sentance: "Can you mark a 10-15 time? Copy, 16-05",
+            expect:   []string{"<@U06H9NA2L4V>"},
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            blocks := Mentions(test.sentance, keywordsMap)
+            assert.ElementsMatch(t, test.expect, blocks)
+        })
+    }
+}
+
 // func TestTrunkTranscribe(t *testing.T) {
 //     mux := NewMux(nil)
 

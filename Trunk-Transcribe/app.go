@@ -31,10 +31,11 @@ import (
 )
 
 var (
-	puncRegex = regexp.MustCompile("[\\.\\!\\?;]\\s+")
-	streets   = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "The", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
-	modifiers = []string{"street", "boulevard", "road", "path", "way", "avenue"}
-	terms     = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
+	puncRegex  = regexp.MustCompile("[\\.\\!\\?;]\\s+")
+	wordsRegex = regexp.MustCompile("[a-zA-Z0-9_]+")
+	streets    = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "The", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
+	modifiers  = []string{"street", "boulevard", "road", "path", "way", "avenue"}
+	terms      = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
 
 	//slack user id to keywords map
 	keywordsMap = map[string][]string{
@@ -298,19 +299,7 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	// Append mentions
-	var mentions []string
-	lower := strings.ToLower(meta.AudioText)
-	for userID, keywords := range keywordsMap {
-		for _, keyword := range keywords {
-			lowKey := strings.ToLower(keyword)
-			if strings.Contains(lower, lowKey) {
-				mentions = append(mentions, "<@"+userID+">")
-				break
-			}
-		}
-	}
-
+	mentions := Mentions(meta.AudioText, keywordsMap)
 	if str := strings.Join(mentions, " "); len(str) > 0 {
 		blocks = append(blocks, str)
 	}
@@ -370,6 +359,41 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	// return slack.PostWebhookContext(ctx, url, &slack.WebhookMessage{
 	// 	Attachments: []slack.Attachment{attachment},
 	// })
+}
+
+// Mentions returns the list of mentions to append corresponding to matching keywords in the
+// sentance
+// It accepts a sentace to match keywords against. The keywords map provides a map
+// of mentions to keywords to match.
+func Mentions(sentance string, keywordsMap map[string][]string) []string {
+	// Append mentions
+	var mentions []string
+	sentance = strings.ToLower(sentance)
+	words := wordsRegex.FindAllString(sentance, -1) //split sentance into words array
+	for userID, segments := range keywordsMap {
+		for _, segment := range segments {
+			segment = strings.ToLower(segment)
+			keywords := wordsRegex.FindAllString(segment, -1)
+			if len(words) < len(keywords) {
+				continue
+			}
+			matched := false
+			for i := 0; i < len(words); i += len(keywords) {
+				for j, keyword := range keywords {
+					if matched = words[i+j] == keyword; !matched {
+						break
+					}
+				}
+				switch matched {
+				case true:
+					mentions = append(mentions, "<@"+userID+">")
+				case false:
+					continue
+				}
+			}
+		}
+	}
+	return mentions
 }
 
 func writeErr(w http.ResponseWriter, err error) {
