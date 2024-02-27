@@ -112,8 +112,18 @@ func TestMentions(t *testing.T) {
         },
         {
             name:     "multi word match",
-            sentance: "Fancroft and Piedmont,we've got a vehicle versus bike,and we've got an involved party on the phone,we've got BFD and RUN as well",
-            expect:   []string{"<@U06H9NA2L4V>", "<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
+            sentance: "Fancroft and Piedmont,we've got a vehicle versus bike, and we've got an involved party on the phone,we've got BFD and RUN as well",
+            expect:   []string{"<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
+        },
+        {
+            name:     "negate",
+            sentance: "Fancroft and Piedmont, no weapon seen",
+            expect:   nil,
+        },
+        {
+            name:     "weapon",
+            sentance: "Fancroft and Piedmont, weapon seen",
+            expect:   []string{"<@U06H9NA2L4V>"},
         },
         {
             name:     "Capitalized",
@@ -139,8 +149,73 @@ func TestMentions(t *testing.T) {
 
     for _, test := range tests {
         t.Run(test.name, func(t *testing.T) {
-            blocks := Mentions(test.sentance, keywordsMap)
-            assert.ElementsMatch(t, test.expect, blocks)
+            meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, notifsMap)
+            assert.ElementsMatch(t, test.expect, meta.Mentions)
+        })
+    }
+}
+
+func TestStreets(t *testing.T) {
+    tests := []struct {
+        name     string
+        sentance string
+        expect   SlackMeta
+    }{
+        {
+            name:     "none",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van",
+            expect:   SlackMeta{},
+        },
+        {
+            name:     "single",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft",
+            expect: SlackMeta{
+                Address: Address{Streets: []string{"Bancroft"}},
+            },
+        },
+        {
+            name:     "cross streets",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft and Channing",
+            expect: SlackMeta{
+                Address: Address{Streets: []string{"Bancroft", "Channing"}},
+            },
+        },
+        {
+
+            name:     "three",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft between Channing and Milvia",
+            expect: SlackMeta{
+                Address: Address{Streets: []string{"Bancroft", "Channing", "Milvia"}},
+            },
+        },
+        {
+            name:     "address number",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft",
+            expect: SlackMeta{
+                Address: Address{
+                    Streets:        []string{"Bancroft"},
+                    PrimaryAddress: "3049",
+                },
+            },
+        },
+        {
+            name:     "address number two streets",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft and Channing",
+            expect: SlackMeta{
+                Address: Address{
+                    Streets:        []string{"Bancroft", "Channing"},
+                    PrimaryAddress: "3049",
+                },
+            },
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, notifsMap)
+            assert.ElementsMatch(t, test.expect.Address.Streets, meta.Address.Streets)
+
+            assert.Equal(t, test.expect.Address.String(), meta.Address.String())
         })
     }
 }

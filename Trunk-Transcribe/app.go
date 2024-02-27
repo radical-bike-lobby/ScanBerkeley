@@ -31,20 +31,31 @@ import (
 )
 
 var (
-	puncRegex  = regexp.MustCompile("[\\.\\!\\?;]\\s+")
-	wordsRegex = regexp.MustCompile("[a-zA-Z0-9_]+")
-	streets    = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "The", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
-	modifiers  = []string{"street", "boulevard", "road", "path", "way", "avenue"}
-	terms      = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
+	puncRegex    = regexp.MustCompile("[\\.\\!\\?;]\\s+")
+	wordsRegex   = regexp.MustCompile("[a-zA-Z0-9_-]+")
+	numericRegex = regexp.MustCompile("[0-9]+")
+	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
+	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue"}
+	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
 
 	//slack user id to keywords map
-	keywordsMap = map[string][]string{
+	// supports regex
+	notifsMap = map[string]Notifs{
 		// emilies keywords
-		"U06H9NA2L4V": []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "weapon", "versus ped", "versus bike", "bike versus", "pedestrian", "bike", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner"},
+		"U06H9NA2L4V": Notifs{
+			Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "ped", "versus", "pedestrian", "bike", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "gun"},
+			NotRegex: regexp.MustCompile("no (weapon|gun)"),
+			Regex:    regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
+		},
 		// naveens
-		"U0531U1RY1W": []string{"cyclist", "bicycle", "bike", "pedestrian", "Rose", "Hopkins", "wheelchair", "highland"},
-		// marc
-		"U03FTUS9SSD": []string{"bike", "bicycle", "cyclist"},
+		"U0531U1RY1W": Notifs{
+			Include: []string{"Rose"},
+			Regex:   regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
+		},
+		// marcs
+		"U03FTUS9SSD": Notifs{
+			Include: []string{"bike", "bicycle", "cyclist"},
+		},
 	}
 
 	defaultChannelID = "C06A28PMXFZ" // #scanner-dispatches
@@ -304,12 +315,17 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	mentions := Mentions(meta.AudioText, keywordsMap)
+	slackMeta := ExtractSlackMeta(meta, notifsMap)
+	mentions := slackMeta.Mentions
 	if str := strings.Join(mentions, " "); len(str) > 0 {
 		blocks = append(blocks, str)
 	}
 	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
 	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
+	if addr := slackMeta.Address.String(); len(addr) > 0 {
+		blocks = append(blocks, "Location: "+addr)
+	}
+
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 	sentances := strings.Join(blocks, "\n")
 
@@ -337,39 +353,75 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	return err
 }
 
-// Mentions returns the list of mentions to append corresponding to matching keywords in the
+// ExtractSlackMeta returns the list of mentions and an address to append corresponding to matching keywords in the
 // sentance
 // It accepts a sentace to match keywords against. The keywords map provides a map
 // of mentions to keywords to match.
-func Mentions(sentance string, keywordsMap map[string][]string) []string {
-	// Append mentions
-	var mentions []string
-	sentance = strings.ToLower(sentance)
-	words := wordsRegex.FindAllString(sentance, -1) //split sentance into words array
-	for userID, segments := range keywordsMap {
-		for _, segment := range segments {
-			segment = strings.ToLower(segment)
-			keywords := wordsRegex.FindAllString(segment, -1)
-			if len(words) < len(keywords) {
-				continue
+
+func ExtractSlackMeta(meta Metadata, notifsMap map[string]Notifs) (slackMeta SlackMeta) {
+
+	text := strings.ToLower(meta.AudioText)
+	words := wordsRegex.FindAllString(text, -1) //split text into words array
+
+	for userID, notifs := range notifsMap {
+
+		if notifs.NotRegex != nil && notifs.NotRegex.MatchString(text) {
+			continue
+		} else if notifs.Regex != nil && notifs.Regex.MatchString(text) {
+			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+userID+">")
+			continue
+		}
+
+		matched := false
+		for _, keyword := range notifs.Include {
+			keyword = strings.ToLower(keyword)
+			for _, word := range words {
+				if keyword == word {
+					matched = true
+					break
+				}
 			}
-			matched := false
-			for i := 0; i < len(words); i += len(keywords) {
-				for j, keyword := range keywords {
-					if matched = words[i+j] == keyword; !matched {
-						break
-					}
-				}
-				switch matched {
-				case true:
-					mentions = append(mentions, "<@"+userID+">")
-				case false:
-					continue
-				}
+			if matched {
+				break
 			}
 		}
+		if matched {
+			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+userID+">")
+		}
 	}
-	return mentions
+
+	// match address
+	for i := 0; i < len(words); i += 1 {
+		prefix := words[i]
+		var word string
+		if len(words[i:]) >= 2 {
+			word = words[i+1]
+		}
+
+		hasAddrNumber := numericRegex.MatchString(prefix)
+
+		for _, street := range streets {
+			lowerCase := strings.ToLower(street)
+			found := false
+			switch {
+			case hasAddrNumber && word == lowerCase:
+				slackMeta.Address.Streets = append(slackMeta.Address.Streets, street)
+				slackMeta.Address.PrimaryAddress = prefix
+				// incr index by one to move on to the next pair
+				i += 1
+				found = true
+			case prefix == lowerCase:
+				slackMeta.Address.Streets = append(slackMeta.Address.Streets, street)
+				found = true
+			}
+			if found {
+				break
+			}
+		}
+
+	}
+
+	return slackMeta
 }
 
 func writeErr(w http.ResponseWriter, err error) {
@@ -468,4 +520,35 @@ type Metadata struct {
 	URL               string      `json:"url,omitempty"`
 	SrcList           []Source    `json:"srcList,omitempty"`
 	FreqList          []Frequency `json:"freqList,omitempty"`
+}
+
+type Notifs struct {
+	Include  []string
+	Exclude  []string
+	Regex    *regexp.Regexp
+	NotRegex *regexp.Regexp
+}
+
+type SlackMeta struct {
+	Mentions []string `json:"mentions,omitempty"`
+	Address  Address  `json:"address,omitempty"`
+}
+
+// Address struct encapsulates address info to extract from transcription text
+// Example transcriptions: "2605 Durant", "Can you start for Russell and California please?"
+type Address struct {
+	City           string   `json:"city,omitempty"`
+	PrimaryAddress string   `json:"primary,omitempty"`
+	Streets        []string `json:"streets,omitempty"`
+}
+
+func (addr Address) String() string {
+	streets := strings.Join(addr.Streets, ", ")
+	if len(streets) > 0 {
+		if addr.PrimaryAddress != "" {
+			return fmt.Sprintf("%s %s", addr.PrimaryAddress, streets)
+		}
+		return streets
+	}
+	return ""
 }
