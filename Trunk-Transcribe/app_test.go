@@ -121,8 +121,18 @@ func TestMentions(t *testing.T) {
             expect:   nil,
         },
         {
+            name:     "negate plural",
+            sentance: "Fancroft and Piedmont, no weapons seen",
+            expect:   nil,
+        },
+        {
             name:     "weapon",
             sentance: "Fancroft and Piedmont, weapon seen",
+            expect:   []string{"<@U06H9NA2L4V>"},
+        },
+        {
+            name:     "plural",
+            sentance: "Fancroft and Piedmont, weapons seen",
             expect:   []string{"<@U06H9NA2L4V>"},
         },
         {
@@ -184,6 +194,14 @@ func TestStreets(t *testing.T) {
 
             name:     "three",
             sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft between Channing and Milvia",
+            expect: SlackMeta{
+                Address: Address{Streets: []string{"Bancroft", "Channing", "Milvia"}},
+            },
+        },
+        {
+
+            name:     "duplicates",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft between Channing and Milvia, repeat Channing and Milvia",
             expect: SlackMeta{
                 Address: Address{Streets: []string{"Bancroft", "Channing", "Milvia"}},
             },

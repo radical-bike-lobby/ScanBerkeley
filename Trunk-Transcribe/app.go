@@ -34,7 +34,7 @@ var (
 	puncRegex    = regexp.MustCompile("[\\.\\!\\?;]\\s+")
 	wordsRegex   = regexp.MustCompile("[a-zA-Z0-9_-]+")
 	numericRegex = regexp.MustCompile("[0-9]+")
-	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "Le", "Conte", "Mabel", "Marin", "Martin", "Luther", "King", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
+	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "LeConte", "LeRoy", "Hilgard", "Mabel", "Marin", "Martin", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue"}
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing"}
 
@@ -43,8 +43,8 @@ var (
 	notifsMap = map[string]Notifs{
 		// emilies keywords
 		"U06H9NA2L4V": Notifs{
-			Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "ped", "versus", "pedestrian", "bike", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "gun"},
-			NotRegex: regexp.MustCompile("no (weapon|gun)"),
+			Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "ped", "versus", "pedestrian", "bike", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
+			NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 			Regex:    regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
 		},
 		// naveens
@@ -54,7 +54,7 @@ var (
 		},
 		// marcs
 		"U03FTUS9SSD": Notifs{
-			Include: []string{"bike", "bicycle", "cyclist"},
+			Regex: regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
 		},
 	}
 
@@ -405,13 +405,13 @@ func ExtractSlackMeta(meta Metadata, notifsMap map[string]Notifs) (slackMeta Sla
 			found := false
 			switch {
 			case hasAddrNumber && word == lowerCase:
-				slackMeta.Address.Streets = append(slackMeta.Address.Streets, street)
+				slackMeta.Address = slackMeta.Address.AppendStreet(street)
 				slackMeta.Address.PrimaryAddress = prefix
 				// incr index by one to move on to the next pair
 				i += 1
 				found = true
 			case prefix == lowerCase:
-				slackMeta.Address.Streets = append(slackMeta.Address.Streets, street)
+				slackMeta.Address = slackMeta.Address.AppendStreet(street)
 				found = true
 			}
 			if found {
@@ -540,6 +540,16 @@ type Address struct {
 	City           string   `json:"city,omitempty"`
 	PrimaryAddress string   `json:"primary,omitempty"`
 	Streets        []string `json:"streets,omitempty"`
+}
+
+func (addr Address) AppendStreet(street string) Address {
+	for _, st := range addr.Streets {
+		if st == street {
+			return addr
+		}
+	}
+	addr.Streets = append(addr.Streets, street)
+	return addr
 }
 
 func (addr Address) String() string {
