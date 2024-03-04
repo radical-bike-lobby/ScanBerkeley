@@ -178,9 +178,9 @@ func TestStreets(t *testing.T) {
         },
         {
             name:     "single",
-            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at Bancroft and Channing",
             expect: SlackMeta{
-                Address: Address{Streets: []string{"Bancroft"}},
+                Address: Address{Streets: []string{"Bancroft", "Channing"}},
             },
         },
         {
@@ -211,8 +211,8 @@ func TestStreets(t *testing.T) {
             sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft",
             expect: SlackMeta{
                 Address: Address{
-                    Streets:        []string{"Bancroft"},
-                    PrimaryAddress: "3049",
+                    Streets:        []string{},
+                    PrimaryAddress: "3049 Bancroft",
                 },
             },
         },
@@ -221,8 +221,8 @@ func TestStreets(t *testing.T) {
             sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft and Channing",
             expect: SlackMeta{
                 Address: Address{
-                    Streets:        []string{"Bancroft", "Channing"},
-                    PrimaryAddress: "3049",
+                    Streets:        []string{"Channing"},
+                    PrimaryAddress: "3049 Bancroft",
                 },
             },
         },
@@ -234,6 +234,9 @@ func TestStreets(t *testing.T) {
             assert.ElementsMatch(t, test.expect.Address.Streets, meta.Address.Streets)
 
             assert.Equal(t, test.expect.Address.String(), meta.Address.String())
+            if test.expect.Address.PrimaryAddress != "" || len(test.expect.Address.Streets) > 0 {
+                assert.NotEmpty(t, meta.Address.String())
+            }
         })
     }
 }
