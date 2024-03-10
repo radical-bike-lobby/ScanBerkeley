@@ -34,6 +34,8 @@ var (
 	puncRegex    = regexp.MustCompile("[\\.\\!\\?;]\\s+")
 	wordsRegex   = regexp.MustCompile("[a-zA-Z0-9_-]+")
 	numericRegex = regexp.MustCompile("[0-9]+")
+	modeString   = `(car|driver|vehicle|bike|pedestrian|ped|bicycle|cyclist|bicyclist|pavement)s?`
+	versusRegex  = regexp.MustCompile(modeString + `.+(vs|versus|verses).+` + modeString)
 	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "LeConte", "LeRoy", "Hilgard", "Mabel", "Marin", "Martin", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland"}
@@ -45,16 +47,16 @@ var (
 		"U06H9NA2L4V": Notifs{
 			Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
 			NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
-			Regex:    regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
+			Regex:    versusRegex,
 		},
 		// naveens
 		"U0531U1RY1W": Notifs{
 			Include: []string{"Rose"},
-			Regex:   regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
+			Regex:   versusRegex,
 		},
 		// marcs
 		"U03FTUS9SSD": Notifs{
-			Regex: regexp.MustCompile(`(vs|versus)\s+(bike|pedestrian|ped|bicycle|cyclist)`),
+			Regex: versusRegex,
 		},
 	}
 

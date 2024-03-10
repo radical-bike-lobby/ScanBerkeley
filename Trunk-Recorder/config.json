@@ -1,12 +1,13 @@
 {
     "ver": 2,
+    "controlRetuneLimit": 5,
     "sources": [
         {
             "center": 769.965625e6,
             "rate": 2048000,
             "error": 2095,
             "gain": 40,
-            "digitalRecorders": 20,
+            "digitalRecorders": 12,
             "driver": "osmosdr",
             "device": "rtl=0"
         },
@@ -15,7 +16,7 @@
             "rate": 2048000,
             "error": 2095,
             "gain": 40,
-            "digitalRecorders": 20,
+            "digitalRecorders": 12,
             "driver": "osmosdr",
             "device": "rtl=1"
         },
