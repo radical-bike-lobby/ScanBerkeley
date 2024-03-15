@@ -126,6 +126,11 @@ func TestMentions(t *testing.T) {
             expect:   []string{"<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
         },
         {
+            name:     "versus match - auto vs. ped",
+            sentance: "Fancroft and Piedmont,we've got a auto vs. ped, and we've got an involved party on the phone,we've got BFD and RUN as well",
+            expect:   []string{"<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
+        },
+        {
             name:     "negate",
             sentance: "Fancroft and Piedmont, no weapon seen",
             expect:   nil,
