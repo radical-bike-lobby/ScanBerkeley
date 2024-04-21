@@ -45,7 +45,7 @@
 			"recordUnknown": false,
             "squelch": -50,
             "modulation": "qpsk",
-            "logLevel": "info",
+            "logLevel": "debug",
 			"audioArchive": true,
 			"callLog": true,
 			"uploadScript": "/app/transcribe.sh"
