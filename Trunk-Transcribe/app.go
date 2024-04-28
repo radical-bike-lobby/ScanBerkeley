@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +31,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type SlackChannelID string
+
+const (
+	UCPD       SlackChannelID = "C06J8T3EUP9"
+	BERKELEY   SlackChannelID = "C06A28PMXFZ"
+	OAKLAND                   = "C070R7LGVDY"
+	ALBANY                    = "C0713T4KMMX"
+	EMERYVILLE                = "C07123TKG3E"
+)
+
+type SlackUserID string
+
+const (
+	EMILIE SlackUserID = "U06H9NA2L4V"
+	MARC               = "U03FTUS9SSD"
+	NAVEEN             = "U0531U1RY1W"
+)
+
 var (
 	puncRegex    = regexp.MustCompile("[\\.\\!\\?;]\\s+")
 	wordsRegex   = regexp.MustCompile("[a-zA-Z0-9_-]+")
@@ -40,37 +59,57 @@ var (
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech"}
 
-	//slack user id to keywords map
-	// supports regex
-	notifsMap = map[string]Notifs{
-		// emilies keywords
-		"U06H9NA2L4V": Notifs{
-			Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
-			NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
-			Regex:    versusRegex,
-		},
-		// naveens
-		"U0531U1RY1W": Notifs{
-			Include: []string{"Rose"},
-			Regex:   versusRegex,
-		},
-		// marcs
-		"U03FTUS9SSD": Notifs{
-			Regex: versusRegex,
-		},
-	}
+	defaultChannelID = BERKELEY // #scanner-dispatches
 
-	defaultChannelID = "C06A28PMXFZ" // #scanner-dispatches
-
-	channelMap = map[int64]string{
-		3605: "C06J8T3EUP9", // UCB PD1 : #scanner-dispatches-ucpd
-		3606: "C06J8T3EUP9", // UCB PD2 : #scanner-dispatches-ucpd
-		3608: "C06J8T3EUP9", // UCB PD4 : #scanner-dispatches-ucpd
-		3609: "C06J8T3EUP9", // UCB PD5 : #scanner-dispatches-ucpd
+	talkgroupToChannel = map[int64]SlackChannelID{
+		3605: UCPD, // UCB PD1 : #scanner-dispatches-ucpd
+		3606: UCPD, // UCB PD2 : #scanner-dispatches-ucpd
+		3608: UCPD, // UCB PD4 : #scanner-dispatches-ucpd
+		3609: UCPD, // UCB PD5 : #scanner-dispatches-ucpd
+		3055: ALBANY,
+		3056: ALBANY,
+		3057: ALBANY,
+		3058: ALBANY,
+		3059: ALBANY,
+		2050: ALBANY,
+		2055: ALBANY,
+		2056: ALBANY,
+		2057: ALBANY,
+		2058: ALBANY,
+		2059: ALBANY,
+		4055: ALBANY,
+		3155: EMERYVILLE,
+		3156: EMERYVILLE,
+		3157: EMERYVILLE,
+		4155: EMERYVILLE,
 	}
 
 	location *time.Location
 )
+
+//slack user id to keywords map
+// supports regex
+
+var notifsMap = map[SlackUserID]Notifs{
+
+	EMILIE: Notifs{
+		Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
+		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
+		Regex:    versusRegex,
+		Channels: []SlackChannelID{BERKELEY, UCPD},
+	},
+
+	NAVEEN: Notifs{
+		Include:  []string{"Rose"},
+		Regex:    versusRegex,
+		Channels: []SlackChannelID{BERKELEY, UCPD, OAKLAND, ALBANY, EMERYVILLE},
+	},
+
+	MARC: Notifs{
+		Regex:    versusRegex,
+		Channels: []SlackChannelID{BERKELEY, UCPD},
+	},
+}
 
 //go:embed templates/*
 var resources embed.FS
@@ -317,7 +356,13 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	slackMeta := ExtractSlackMeta(meta, notifsMap)
+	// determine channel
+	channelID, ok := talkgroupToChannel[meta.Talkgroup]
+	if !ok {
+		channelID = defaultChannelID
+	}
+
+	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions
 	if str := strings.Join(mentions, " "); len(str) > 0 {
 		blocks = append(blocks, str)
@@ -331,12 +376,6 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 	sentances := strings.Join(blocks, "\n")
 
-	// determine channel
-	channelID, ok := channelMap[meta.Talkgroup]
-	if !ok {
-		channelID = defaultChannelID
-	}
-
 	// upload audio
 	filename := filepath.Base(key)
 	file, err := config.slackClient.UploadFile(slack.FileUploadParameters{
@@ -344,7 +383,7 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		Filetype:       "auto",
 		Reader:         reader,
 		InitialComment: sentances,
-		Channels:       []string{channelID},
+		Channels:       []string{string(channelID)},
 	})
 	if err != nil {
 		log.Println("Error uploading file to slack: ", err)
@@ -360,20 +399,24 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 // It accepts a sentace to match keywords against. The keywords map provides a map
 // of mentions to keywords to match.
 
-func ExtractSlackMeta(meta Metadata, notifsMap map[string]Notifs) (slackMeta SlackMeta) {
+func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[SlackUserID]Notifs) (slackMeta SlackMeta) {
 
 	text := strings.ToLower(meta.AudioText)
 	words := wordsRegex.FindAllString(text, -1) //split text into words array
 
 	for userID, notifs := range notifsMap {
 
-		if notifs.NotRegex != nil && notifs.NotRegex.MatchString(text) {
+		switch {
+		case !slices.Contains(notifs.Channels, channelID): // user not listening to channel
 			continue
-		} else if notifs.Regex != nil && notifs.Regex.MatchString(text) {
-			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+userID+">")
+		case notifs.NotRegex != nil && notifs.NotRegex.MatchString(text): // notregex matches text. skip
+			continue
+		case notifs.Regex != nil && notifs.Regex.MatchString(text): // regex matches text. append
+			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
 			continue
 		}
 
+		// check the included keywords
 		matched := false
 		for _, keyword := range notifs.Include {
 			keyword = strings.ToLower(keyword)
@@ -388,7 +431,7 @@ func ExtractSlackMeta(meta Metadata, notifsMap map[string]Notifs) (slackMeta Sla
 			}
 		}
 		if matched {
-			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+userID+">")
+			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
 		}
 	}
 
@@ -525,9 +568,9 @@ type Metadata struct {
 
 type Notifs struct {
 	Include  []string
-	Exclude  []string
 	Regex    *regexp.Regexp
 	NotRegex *regexp.Regexp
+	Channels []SlackChannelID //the channels to listen on
 }
 
 type SlackMeta struct {

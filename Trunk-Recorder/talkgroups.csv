@@ -17,3 +17,19 @@ Decimal,Hex,Mode,Alpha Tag,Description,Tag,Category,Priority
 3606,e16,D,UCB PD2,Police Ch 2,Law Tac,UC Berkeley,1
 3608,e18,D,UCB PD4 ENF,Police Enforcement,Law Tac,UC Berkeley,1
 3609,e19,D,UCB PD5,POLICE TAC,Law Tac,UC Berkeley,1
+3055,bef,T,Albany PD1,Police Dispatch,Law Dispatch,Albany,1
+3056,bf0,D,Albany PD2,Police Tac 2,Law Tac,Albany,1
+3057,bf1,D,Albany PD3,Police Ch 3,Law Tac,Albany,1
+3058,bf2,D,Albany PD4,Police Ch 4,Law Tac,Albany,1
+3059,bf3,D,Albany PD5,Police Ch 5,Law Tac,Albany,1
+2050,802,D,Albany FD All,Fire All Call,Fire Dispatch,Albany,1
+2055,807,D,Albany FD1,Fire Dispatch,Fire Dispatch,Albany,1
+2056,808,D,Albany FD2,Fire Emergency Revert,Fire-Tac,Albany,1
+2057,809,D,Albany FD3,Fire Ch 3,Fire-Tac,Albany,1
+2058,80a,D,Albany FD4,Fire Ch 4,Fire-Tac,Albany,1
+2059,80b,D,Albany FD5,Fire Ch 5,Fire-Tac,Albany,1
+4055,fd7,D,Albany PW,Public Works,Public Works,Albany,1
+3155,c53,T,Emeryville PD1,Police Dispatch,Law Dispatch,Emeryville,1
+3156,c54,D,Emeryville PD2,Police Ch 2,Law Tac,Emeryville,1
+3157,c55,D,Emeryville PD3,Police Ch 3,Law Tac,Emeryville,1
+4155,103b,D,Emeryville PW1,Public Works,Public Works,Emeryville,1
