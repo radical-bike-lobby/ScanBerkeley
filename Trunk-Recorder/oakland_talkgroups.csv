@@ -1,0 +1,42 @@
+Decimal,Hex,Mode,Alpha Tag,Description,Tag,Category,Priority
+3405,d4d,T,Oakland PD1,Police Patrol 1 - Beats 1 to 19,Law Dispatch
+3406,d4e,T,Oakland PD2,Police Patrol 2 - Open/Car to Car,Law Talk
+3407,d4f,T,Oakland PD3,Police Patrol 3 - Beats 20 to 35,Law Dispatch
+3408,d50,T,Oakland PD4,Police Patrol 4 - Car to Car,Law Talk
+3409,d51,T,Oakland PD5,Police Patrol 5 - Open/Car to Car,Law Talk
+3410,d52,T,Oakland PD6,Police Service 1,Law Talk
+3411,d53,T,Oakland PD7,Police Service 2,Law Talk
+3418,d5a,T,Oakland PD Tac 1,Police Tac 1,Law Tac
+3419,d5b,T,Oakland PD Tac 2,Police Tac 2,Law Tac
+3420,d5c,T,Oakland PD Tac 3,Police Tac 3,Law Tac
+3421,d5d,T,Oakland PD Tac 4,Police Tac 4,Law Tac
+3422,d5e,T,Oakland PD Tac 5,Police Tac 5,Law Tac
+3423,d5f,T,Oakland PD Tac 6,Police Tac 6,Law Tac
+3424,d60,T,Oakland PD Tac 7,Police Tac 7,Law Tac
+3425,d61,T,Oakland PD Tac 8,Police Tac 8,Law Tac
+3426,d62,T,Oakland PD Tac 9,Police Tac 9,Law Tac
+3428,d64,T,Oakland PD Tng 1,Police Training 1,Law Tac
+3429,d65,T,Oakland PD Tng 2,Police Training 2,Law Tac
+3447,d77,T,Oakland HAPD 1,Housing Authority Police Dispatch ,Law Dispatch
+3448,d78,T,Oakland HAPD 2,Housing Authority Police Secondary,Law Tac
+2400,960,T,Oakland FD Ann,Fire All Call,Fire Dispatch
+2405,965,T,Oakland FD1,Fire Dispatch,Fire Dispatch
+2406,966,T,Oakland FD2,Fire Ch 2,Fire-Tac
+2407,967,T,Oakland FD3,Fire Ch 3,Fire-Tac
+2408,968,T,Oakland FD4,Fire Ch 4,Fire-Tac
+2409,969,T,Oakland FD5,Fire Ch 5,Fire-Tac
+2410,96a,T,Oakland FD6,Fire Ch 6,Fire-Tac
+2411,96b,T,Oakland FD7,Fire Ch 7,Fire-Tac
+2412,96c,T,Oakland FD8,Fire Ch 8,Fire-Tac
+2413,96d,T,Oakland FD9,Fire Ch 9,Fire-Tac
+2414,96e,T,Oakland FD10,Fire Ch 10,Fire-Tac
+2416,970,T,Oakland FD12,Fire Airport Crash Crews,Fire Dispatch
+2417,971,T,Oakland FD Cmd,Fire Command,Fire-Tac
+2434,982,T,Oakland FD Siren,Fire Emergency Sirens,Data
+2436,984,T,Oakland FD Disp,Fire Automated Dispatch,Fire Dispatch
+4405,1135,T,Oakland PW,Public Works,Public Works
+4407,1137,T,OaklandPW Street,Public Works Street Maintenance,Public Works
+4415,113f,T,Oakland PW Sewer,Public Works Sewers,Public Works
+4421,1145,T,Oakland Parking1,Parking Enforcement 1,Law Talk
+4422,1146,T,Oakland Parking2,Parking Enforcement 2,Law Talk
+4423,1147,T,Oakland Parking3,Parking Enforcement 3 (Meter Collectors),Law Talk

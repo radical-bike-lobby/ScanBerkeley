@@ -40,15 +40,72 @@
             ],
             "type": "p25",
             "shortName": "Berkeley",
-            "talkgroupsFile": "talkgroups.csv",
+            "talkgroupsFile": "berkeley_talkgroups.csv",
             "unitTagsFile": "UnitTags.csv",
-	    "recordUnknown": false,
+	        "recordUnknown": false,
             "squelch": -50,
             "modulation": "qpsk",
             "logLevel": "debug",
-	    "audioArchive": true,
-	    "callLog": true,
-	    "uploadScript": "/app/transcribe.sh"
+	        "audioArchive": true,
+	        "callLog": true,
+	        "uploadScript": "/app/transcribe.sh"
+        },
+        {
+            "control_channels": [
+                773.46875e6,
+                773.74375e6,
+                774.21875e6,
+                774.49375e6
+            ],
+            "type": "p25",
+            "shortName": "Albany",
+            "talkgroupsFile": "albany_talkgroups.csv",
+            "unitTagsFile": "UnitTags.csv",
+            "recordUnknown": false,
+            "squelch": -50,
+            "modulation": "qpsk",
+            "logLevel": "debug",
+            "audioArchive": true,
+            "callLog": true,
+            "uploadScript": "/app/transcribe.sh"
+        },
+        {
+            "control_channels": [
+                773.46875e6,
+                773.74375e6,
+                774.21875e6,
+                774.49375e6
+            ],
+            "type": "p25",
+            "shortName": "Emeryville",
+            "talkgroupsFile": "emeryville_talkgroups.csv",
+            "unitTagsFile": "UnitTags.csv",
+            "recordUnknown": false,
+            "squelch": -50,
+            "modulation": "qpsk",
+            "logLevel": "debug",
+            "audioArchive": true,
+            "callLog": true,
+            "uploadScript": "/app/transcribe.sh"
+        },
+        {
+            "control_channels": [
+                773.46875e6,
+                773.74375e6,
+                774.21875e6,
+                774.49375e6
+            ],
+            "type": "p25",
+            "shortName": "Oakland",
+            "talkgroupsFile": "oakland_talkgroups.csv",
+            "unitTagsFile": "UnitTags.csv",
+            "recordUnknown": false,
+            "squelch": -50,
+            "modulation": "qpsk",
+            "logLevel": "debug",
+            "audioArchive": true,
+            "callLog": true,
+            "uploadScript": "/app/transcribe.sh"
         }
     ]
 }
