@@ -21,6 +21,6 @@ fi
 API_BASE_URL="https://trunk-transcribe.fly.dev"
 
 echo "Submitting $FILEPATH for transcription"
-curl -v --connect-timeout 1 --form call_audio=@$wav --form call_json=@$json "$API_BASE_URL/transcribe"  &>/dev/null &
+curl -v --connect-timeout 10 --form call_audio=@$wav --form call_json=@$json "$API_BASE_URL/transcribe"  &>/dev/null &
 disown
 # We run the curl command as a background process and disown it to not hang up trunk-recorder.
