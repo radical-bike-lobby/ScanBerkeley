@@ -152,6 +152,7 @@ var notifsMap = map[SlackUserID]Notifs{
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
 	JOSE: Notifs {
+		Include: []string {"accident", "collision", "crash"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{OAKLAND},
 	},
