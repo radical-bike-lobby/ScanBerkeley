@@ -23,7 +23,6 @@ All these files have aspects like API keys and URLs set as: `REDACTED_CHANGEME`
 You will need to change these to your own software values.
 
 
-
 ## Trunk-Recorder    
 
 | File | Description                |
@@ -41,10 +40,3 @@ You will need to change these to your own software values.
 | `/app/whisper.py` | Contains a modified file for the OpenAI prompt. |
 | `.env` | Contains all main Trunk-Transcribe settings. All URLs/API Keys we modified are redacted. |
 
-
-## crimeisdown-V3   
-
-| File | Description                |
-| :-------- | :------------------------- |
-| `/config/environment.js` | Contains the main API urls (redacted). |
-| `/app/*` | Contains all our modified files for the web interface. This removes all but the transcribe page. |
