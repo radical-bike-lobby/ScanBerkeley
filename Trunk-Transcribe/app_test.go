@@ -233,7 +233,7 @@ func TestStreets(t *testing.T) {
         },
         {
             name:     "address number two streets",
-            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft and Channing",
+            sentance: "Can you tell me one more time? you got me en route to 1071 in the SRT van? In the SRT van at 3049 Bancroft and Channing and Milvia",
             expect: SlackMeta{
                 Address: Address{
                     Streets:        []string{"Channing"},
