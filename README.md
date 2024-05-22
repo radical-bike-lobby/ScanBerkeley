@@ -11,8 +11,6 @@ This is not a drag-and-drop setup. I am only providing the config files and modi
 
 [Trunk-Transcribe](https://github.com/CrimeIsDown/trunk-transcribe)
 
-[CrimeIsDown](https://github.com/CrimeIsDown/crimeisdown-v3)
-
 ## Needed Hardware
 
 I ran this system using both a raspberry pi 4 for Trunk-Recorder and Rdio-Scanner, along with a DigitalOcean droplet for Trunk-Transcribe and crimeisdown-V3. We used 3x of [this SDR and antena](https://www.amazon.com/dp/B01GDN1T4S) that seemed to work fine for the local connection to the raspberry pi.
