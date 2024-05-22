@@ -166,6 +166,11 @@ func TestMentions(t *testing.T) {
             expect:   []string{"<@U0531U1RY1W>"},
         },
         {
+            name:     "rose last",
+            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Shattuck and Rose.",
+            expect:   []string{"<@U0531U1RY1W>"},
+        },
+        {
             name:     "hyphen",
             sentance: "Can you mark a 10-15 time? Copy, 16-05",
             expect:   []string{"<@U06H9NA2L4V>"},
