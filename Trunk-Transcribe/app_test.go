@@ -152,7 +152,7 @@ func TestMentions(t *testing.T) {
         },
         {
             name:     "Capitalized",
-            sentance: "ROSE",
+            sentance: "ROSE ST",
             expect:   []string{"<@U0531U1RY1W>"},
         },
         {
@@ -162,12 +162,12 @@ func TestMentions(t *testing.T) {
         },
         {
             name:     "rose",
-            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Rose and Shattuck.",
+            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Rose St and Shattuck.",
             expect:   []string{"<@U0531U1RY1W>"},
         },
         {
             name:     "rose last",
-            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Shattuck and Rose.",
+            sentance: "It's going to be a good 242 with the prosecution requested, BFD declined, and clear for a suspect description. Shattuck and Rose St.",
             expect:   []string{"<@U0531U1RY1W>"},
         },
         {
