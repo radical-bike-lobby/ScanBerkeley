@@ -142,9 +142,9 @@ var notifsMap = map[SlackUserID]Notifs{
 	},
 
 	NAVEEN: Notifs{
-		Include:  []string{"Rose"},
+		Include:  []string{"Rose St", "Rose Street", "Edith", "Hopkins", "Ruth Acty"},
 		Regex:    versusRegex,
-		Channels: []SlackChannelID{BERKELEY, UCPD, OAKLAND, ALBANY, EMERYVILLE},
+		Channels: []SlackChannelID{BERKELEY, UCPD, ALBANY, EMERYVILLE},
 	},
 
 	MARC: Notifs{
