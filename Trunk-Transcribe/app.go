@@ -24,9 +24,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/rakyll/openai-go"
-	"github.com/rakyll/openai-go/audio"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"	
+	openai "github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
 )
@@ -164,7 +163,7 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	openaiClient   *audio.Client
+	openaiClient   *openai.Client
 	uploader       *s3manager.Uploader
 	slackClient    *slack.Client
 	webhookUrl     string
@@ -202,9 +201,8 @@ func main() {
 	if openaiKey == "" {
 		log.Fatalf("Missing OPENAI_API_KEY")
 	}
-
-	s := openai.NewSession(os.Getenv("OPENAI_API_KEY"))
-	openaiCli := audio.NewClient(s, "")
+	
+	openaiCli := openai.NewClient(openaiKey)
 
 	// s3 setup
 	s3Config := &aws.Config{
@@ -336,18 +334,36 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 }
 
 // whisper transcribes the audio with openai Whisper
-func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
+func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (string, error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
-	resp, err := client.CreateTranscription(ctx, &audio.CreateTranscriptionParams{
+	resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
+		Model:       openai.Whisper1,
 		Prompt:      prompt,
 		Language:    "en",
-		Audio:       reader,
-		AudioFormat: "wav",
+		FilePath:    "audio.wav",
+		Reader:      reader,
+		
 	})
 	if err != nil {
 		return "", err
 	}
-	return resp.Text, nil
+	text := ""
+	for _, segment := range resp.Segments {
+		// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
+		if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
+			// silent segment
+			continue	
+		}
+		text += segment.Text
+	}
+	switch {
+	case len(resp.Segments) == 0:
+		return resp.Text, nil
+	case text == "":
+		return "", errors.New("Audio quality too low")
+	default:
+		return text, nil
+	}	
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -356,7 +372,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	b, _ := json.Marshal(meta)
 
 	s3Meta := make(map[string]*string)
-	s3Meta["audio-text"] = aws.String(meta.AudioText)
+	// s3Meta["audio-text"] = aws.String(meta.AudioText)
 	s3Meta["short-name"] = aws.String(meta.ShortName)
 	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
 	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
