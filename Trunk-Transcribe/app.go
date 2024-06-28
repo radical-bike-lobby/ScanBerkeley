@@ -340,7 +340,9 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 		Model:       openai.Whisper1,
 		Prompt:      prompt,
 		Language:    "en",
-		Reader:      reader,		
+		FilePath:    "audio.wav",
+		Reader:      reader,
+		
 	})
 	if err != nil {
 		return "", err
