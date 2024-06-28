@@ -356,10 +356,14 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 		}
 		text += segment.Text
 	}
-	if text == "" {
+	switch {
+	case len(resp.Segments) == 0:
+		return resp.Text, nil
+	case text == "":
 		return "", errors.New("Audio quality too low")
-	}
-	return text, nil	
+	default:
+		return text, nil
+	}	
 }
 
 // transcribeAndUpload uploads the audio to S3
