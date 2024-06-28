@@ -345,7 +345,19 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 	if err != nil {
 		return "", err
 	}
-	return resp.Text, nil
+	text := ""
+	for _, segment := range resp.Segments {
+		// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
+		if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
+			// silent segment
+			continue	
+		}
+		text += segment.Text
+	}
+	if text == "" {
+		return "", errors.New("Audio quality too low")
+	}
+	return text, nil	
 }
 
 // transcribeAndUpload uploads the audio to S3
