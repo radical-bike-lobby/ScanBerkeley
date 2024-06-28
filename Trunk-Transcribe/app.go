@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/rakyll/openai-go"
-	"github.com/rakyll/openai-go/audio"
+	openai "github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
 )
@@ -164,7 +164,7 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	openaiClient   *audio.Client
+	openaiClient   *openai.Client
 	uploader       *s3manager.Uploader
 	slackClient    *slack.Client
 	webhookUrl     string
@@ -202,9 +202,8 @@ func main() {
 	if openaiKey == "" {
 		log.Fatalf("Missing OPENAI_API_KEY")
 	}
-
-	s := openai.NewSession(os.Getenv("OPENAI_API_KEY"))
-	openaiCli := audio.NewClient(s, "")
+	
+	openaiCli := openai.NewClient(openaiKey)
 
 	// s3 setup
 	s3Config := &aws.Config{
@@ -336,13 +335,13 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 }
 
 // whisper transcribes the audio with openai Whisper
-func whisper(ctx context.Context, client *audio.Client, reader io.Reader) (string, error) {
+func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (string, error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
-	resp, err := client.CreateTranscription(ctx, &audio.CreateTranscriptionParams{
+	resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
+		Model:       openai.Whisper1,
 		Prompt:      prompt,
 		Language:    "en",
-		Audio:       reader,
-		AudioFormat: "wav",
+		Reader:      reader,		
 	})
 	if err != nil {
 		return "", err
