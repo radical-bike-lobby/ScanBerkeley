@@ -372,7 +372,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	b, _ := json.Marshal(meta)
 
 	s3Meta := make(map[string]*string)
-	s3Meta["audio-text"] = aws.String(meta.AudioText)
+	// s3Meta["audio-text"] = aws.String(meta.AudioText)
 	s3Meta["short-name"] = aws.String(meta.ShortName)
 	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
 	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
