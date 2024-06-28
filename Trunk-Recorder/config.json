@@ -5,7 +5,7 @@
         {
             "center": 769.965625e6,
             "rate": 2048000,
-            "error": 2695,
+            "error": 395,
             "gain": 40,
             "digitalRecorders": 12,
             "driver": "osmosdr",
@@ -14,7 +14,7 @@
 		{
             "center": 772.09465e6,
             "rate": 2048000,
-            "error": 2695,
+            "error": 395,
             "gain": 40,
             "digitalRecorders": 12,
             "driver": "osmosdr",
@@ -23,7 +23,7 @@
         {
             "center": 773.978125e6,
             "rate": 1800000,
-            "error": 2695,
+            "error": 395,
             "gain": 40,
             "digitalRecorders": 0,
             "driver": "osmosdr",
