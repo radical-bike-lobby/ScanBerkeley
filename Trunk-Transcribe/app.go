@@ -397,8 +397,7 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		return nil
 	}
 	if meta.AudioText == "" {
-		log.Println("Empty audio text. Eliding slack post")
-		return nil
+		meta.AudioText = "Could not transcribe audio"		
 	}
 
 	blocks := strings.Split(meta.AudioText, ". ")
