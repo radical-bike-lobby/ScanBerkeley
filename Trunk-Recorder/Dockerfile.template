@@ -1,4 +1,4 @@
-FROM robotastic/trunk-recorder:RC5.0
+FROM robotastic/trunk-recorder:5.0.0
 
 ENV UDEV=on
 
