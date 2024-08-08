@@ -140,7 +140,7 @@ var notifsMap = map[SlackUserID]Notifs{
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
 	
-	D06VDFJHHQU: Notifs{
+	U06UWE5EDAT: Notifs{
 		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
