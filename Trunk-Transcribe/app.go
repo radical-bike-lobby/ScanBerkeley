@@ -47,6 +47,7 @@ const (
 	MARC               = "U03FTUS9SSD"
 	NAVEEN             = "U0531U1RY1W"
 	JOSE               = "U073Q372CP9"
+	STEPHAN            = "U06UWE5EDAT"
 )
 
 var (
@@ -154,6 +155,11 @@ var notifsMap = map[SlackUserID]Notifs{
 		Include: []string {"accident", "collision", "crash", "crashed", "crashes"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{OAKLAND},
+	},
+	STEPHAN: Notifs{
+		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire"},
+		Regex:    versusRegex,
+		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
 }
 
