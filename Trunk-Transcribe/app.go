@@ -157,8 +157,8 @@ var notifsMap = map[SlackUserID]Notifs{
 		Channels: []SlackChannelID{OAKLAND},
 	},
 	STEPHAN: Notifs{
-		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire"},
-		Regex:    versusRegex,
+		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire", "Shooting", "Shooter", "Shots"},
+		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
 }
