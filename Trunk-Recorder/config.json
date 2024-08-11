@@ -2,7 +2,7 @@
     "ver": 2,
     "controlRetuneLimit": 5,
     "sources": [
-        {
+		{
             "center": 769.965625e6,
             "rate": 2048000,
             "error": 395,
@@ -11,7 +11,7 @@
             "driver": "osmosdr",
             "device": "rtl=0"
         },
-		{
+        {
             "center": 772.09465e6,
             "rate": 2048000,
             "error": 395,
@@ -48,7 +48,8 @@
             "logLevel": "debug",
 	        "audioArchive": true,
 	        "callLog": true,
-	        "uploadScript": "/app/transcribe.sh"
+	        "uploadScript": "/app/transcribe.sh",
+            "enabled": true
         },
         {
             "control_channels": [
@@ -67,7 +68,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+            "enabled": true
         },
         {
             "control_channels": [
@@ -86,7 +88,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+            "enabled": true
         },
         {
             "control_channels": [
@@ -105,7 +108,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+            "enabled": true
         }
     ]
 }
