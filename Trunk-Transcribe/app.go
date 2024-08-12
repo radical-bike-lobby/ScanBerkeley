@@ -325,22 +325,21 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		writer.WriteField("key", rdioScannerSecret)
 		writer.WriteField("meta", string(callJson))
 		writer.WriteField("system", "2") // "eastbay" system
-		part, _ := writer.CreateFormFile("audio", filename)
-		defer part.Close()
+		part, _ := writer.CreateFormFile("audio", filename)		
 		
 		go io.Copy(part, bytes.NewBuffer(data))
 		
 		uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
-		res, err := http.POST(uri, writer.FormDataContentType(), body)
+		res, err := http.Post(uri, writer.FormDataContentType(), body)
 		if err != nil {
 			fmt.Println("Error uploading to rdio-scanner: ", err.Error())
 			return
 		}
-		body, _ := io.ReadAll(res.Body)
+		resBody, _ := io.ReadAll(res.Body)
 		defer res.Body.Close()
 		
-		if resp.StatusCode > 299 {
-			fmt.Printf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
+		if res.StatusCode > 299 {
+			fmt.Printf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, resBody)
 		}
 	}()
 
