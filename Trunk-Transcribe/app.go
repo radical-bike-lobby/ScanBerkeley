@@ -327,7 +327,8 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		writer.WriteField("system", "2") // "eastbay" system
 		part, _ := writer.CreateFormFile("audio", filename)		
 		
-		go io.Copy(part, bytes.NewBuffer(data))
+		io.Copy(part, bytes.NewBuffer(data))
+		writer.Close()
 		
 		uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
 		res, err := http.Post(uri, writer.FormDataContentType(), body)
