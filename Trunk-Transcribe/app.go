@@ -324,7 +324,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		
 		writer.WriteField("key", rdioScannerSecret)
 		writer.WriteField("meta", string(callJson))
-		writer.WriteField("system", 2) // "eastbay" system
+		writer.WriteField("system", "2") // "eastbay" system
 		part, _ := writer.CreateFormFile("audio", filename)
 		defer part.Close()
 		
