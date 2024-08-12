@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -195,6 +196,7 @@ func main() {
 	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
 	webhookUrlUCPD := os.Getenv("SLACK_WEBHOOK_URL_UCPD")
 	slackapiSecret := os.Getenv("SLACK_API_SECRET")
+
 	var api *slack.Client
 	if slackapiSecret == "" || webhookUrl == "" {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
@@ -294,6 +296,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	}
 	defer file.Close()
 
+	filename := filepath.Base(header.Filename)
 	data, _ := ioutil.ReadAll(file)
 
 	var meta Metadata
@@ -304,11 +307,39 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 
 	// fire goroutine and return to unblock client resources
 	go func() {
-		filename := filepath.Base(header.Filename)
+		
 		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
 		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
 		if err != nil {
-			fmt.Println("Error: ", err.Error())
+			fmt.Println("Error transcribing and uploading to slack: ", err.Error())
+		}
+	}()
+
+	// upload to rdio
+	go func() {
+		rdioScannerSecret := os.Getenv("RDIO_SCANNER_API_KEY")
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		defer writer.Close()
+		
+		writer.WriteField("key", rdioScannerSecret)
+		writer.WriteField("meta", string(callJson))
+		writer.WriteField("system", "2") // "eastbay" system
+		part, _ := writer.CreateFormFile("audio", filename)		
+		
+		go io.Copy(part, bytes.NewBuffer(data))
+		
+		uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
+		res, err := http.Post(uri, writer.FormDataContentType(), body)
+		if err != nil {
+			fmt.Println("Error uploading to rdio-scanner: ", err.Error())
+			return
+		}
+		resBody, _ := io.ReadAll(res.Body)
+		defer res.Body.Close()
+		
+		if res.StatusCode > 299 {
+			fmt.Printf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, resBody)
 		}
 	}()
 

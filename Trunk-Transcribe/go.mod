@@ -1,6 +1,6 @@
 module github.com/radical-bike-lobby/trunk-transcribe
 
-go 1.22.4
+go 1.22.6
 
 require (
 	github.com/aws/aws-sdk-go v1.48.16
