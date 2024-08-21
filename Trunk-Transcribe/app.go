@@ -406,15 +406,11 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 // transcribeAndUpload uploads the audio to S3
 func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, reader io.Reader, meta Metadata) error {
 
-	b, _ := json.Marshal(meta)
-
 	s3Meta := make(map[string]*string)
-	// s3Meta["audio-text"] = aws.String(meta.AudioText)
 	s3Meta["short-name"] = aws.String(meta.ShortName)
 	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
 	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
-	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))
-	s3Meta["meta"] = aws.String(string(b))
+	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))	
 
 	input := &s3manager.UploadInput{
 		Bucket:      aws.String("scanner-berkeley"),         // bucket's name
