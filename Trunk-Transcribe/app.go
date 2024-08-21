@@ -356,8 +356,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	} else {
 		msg = "Error transcribing text: " + err.Error()
 	}
-
-	metadata.AudioText = msg
+	
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
