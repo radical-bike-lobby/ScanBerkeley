@@ -265,7 +265,7 @@ func NewMux(config *Config) *http.ServeMux {
 	})
 
 	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20+512)
+		r.Body = http.MaxBytesReader(w, r.Body, 20<<20+512)
 		err := handleTranscription(r.Context(), config, r)
 		if err != nil {
 			writeErr(w, err)
