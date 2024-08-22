@@ -4,7 +4,7 @@
     "sources": [
         {
             "center": 769.965625e6,
-            "rate": 2048000,
+            "rate": 2040000,
             "error": 395,
             "gain": 40,
             "digitalRecorders": 12,
@@ -13,7 +13,7 @@
         },
 		{
             "center": 772.09465e6,
-            "rate": 2048000,
+            "rate": 2040000,
             "error": 395,
             "gain": 40,
             "digitalRecorders": 12,
@@ -46,9 +46,10 @@
             "squelch": -50,
             "modulation": "qpsk",
             "logLevel": "debug",
-	        "audioArchive": true,
-	        "callLog": true,
-	        "uploadScript": "/app/transcribe.sh"
+	    "audioArchive": true,
+	    "callLog": true,
+	    "uploadScript": "/app/transcribe.sh",
+	    "enabled": true
         },
         {
             "control_channels": [
@@ -67,7 +68,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+	    "enabled": false
         },
         {
             "control_channels": [
@@ -86,7 +88,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+	    "enabled": false
         },
         {
             "control_channels": [
@@ -105,7 +108,8 @@
             "logLevel": "debug",
             "audioArchive": true,
             "callLog": true,
-            "uploadScript": "/app/transcribe.sh"
+            "uploadScript": "/app/transcribe.sh",
+	    "enabled": false
         }
     ]
 }
