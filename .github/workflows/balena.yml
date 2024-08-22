@@ -17,4 +17,5 @@ jobs:
           balena_token: ${{ secrets.BALENA_TOKEN }}
           fleet: g_naveen_gattu/scanner-berkeley
       - name: Log release ID built
+        working-directory: ./Trunk-Recorder
         run: echo "Built release ID ${{ steps.build.outputs.release_id }}"
