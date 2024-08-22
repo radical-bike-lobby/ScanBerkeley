@@ -48,8 +48,7 @@
             "logLevel": "debug",
 	    "audioArchive": true,
 	    "callLog": true,
-	    "uploadScript": "/app/transcribe.sh",
-	    "enabled": true
+	    "uploadScript": "/app/transcribe.sh",	    
         },
         {
             "control_channels": [
