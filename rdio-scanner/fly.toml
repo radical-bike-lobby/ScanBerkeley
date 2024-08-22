@@ -1,0 +1,27 @@
+# fly.toml app configuration file generated for rdio-eastbay on 2024-08-11T10:59:04-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'rdio-eastbay'
+primary_region = 'sjc'
+
+[build]
+  image = 'chuot/rdio-scanner:latest'
+
+[[mounts]]
+  source = 'rdio'
+  destination = '/app/data'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  memory = '2gb'
+  cpu_kind = 'shared'
+  cpus = 1
