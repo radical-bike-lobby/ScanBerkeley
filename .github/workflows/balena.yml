@@ -1,0 +1,20 @@
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - Trunk-Recorder/**
+
+jobs:
+  balena_cloud_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: balena-io/deploy-to-balena-action@master
+        id: build
+        with:
+          balena_token: ${{ secrets.BALENA_TOKEN }}
+          fleet: scanner-berkeley
+      - name: Log release ID built
+        run: echo "Built release ID ${{ steps.build.outputs.release_id }}"
