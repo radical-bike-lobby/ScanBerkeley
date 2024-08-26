@@ -35,11 +35,11 @@ type SlackChannelID string
 
 const (
 	UCPD       SlackChannelID = "C06J8T3EUP9"
-	BERKELEY                  = "C06A28PMXFZ"
-	BERKELEY_BACKUP           = "C07JLP66D34"
-	OAKLAND                   = "C070R7LGVDY"
-	ALBANY                    = "C0713T4KMMX"
-	EMERYVILLE                = "C07123TKG3E"
+	BERKELEY   SlackChannelID               = "C06A28PMXFZ"
+	BERKELEY_BACKUP  SlackChannelID         = "C07JLP66D34"
+	OAKLAND          SlackChannelID         = "C070R7LGVDY"
+	ALBANY           SlackChannelID         = "C0713T4KMMX"
+	EMERYVILLE       SlackChannelID         = "C07123TKG3E"
 )
 
 type SlackUserID string
@@ -65,7 +65,7 @@ var (
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech"}
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
-	backupChannelID    = BERKELEY_BACKUP // #scanner-dispatches-backup
+	backupChannelID  = BERKELEY_BACKUP // #scanner-dispatches-backup
 
 	talkgroupToChannel = map[int64]SlackChannelID{
 		3605: UCPD, // UCB PD1 : #scanner-dispatches-ucpd
