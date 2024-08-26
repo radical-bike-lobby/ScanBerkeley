@@ -35,7 +35,8 @@ type SlackChannelID string
 
 const (
 	UCPD       SlackChannelID = "C06J8T3EUP9"
-	BERKELEY   SlackChannelID = "C06A28PMXFZ"
+	BERKELEY                  = "C06A28PMXFZ"
+	BERKELEY_BACKUP           = "C07JLP66D34"
 	OAKLAND                   = "C070R7LGVDY"
 	ALBANY                    = "C0713T4KMMX"
 	EMERYVILLE                = "C07123TKG3E"
@@ -49,6 +50,8 @@ const (
 	NAVEEN             = "U0531U1RY1W"
 	JOSE               = "U073Q372CP9"
 	STEPHAN            = "U06UWE5EDAT"
+
+	BACKUP_SHORTNAME   = "berkeley_backup"
 )
 
 var (
@@ -62,6 +65,7 @@ var (
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech"}
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
+	backupChannelID    = BERKELEY_BACKUP // #scanner-dispatches-backup
 
 	talkgroupToChannel = map[int64]SlackChannelID{
 		3605: UCPD, // UCB PD1 : #scanner-dispatches-ucpd
@@ -134,20 +138,17 @@ var (
 // supports regex
 
 var notifsMap = map[SlackUserID]Notifs{
-
 	EMILIE: Notifs{
 		Include:  []string{"1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
 		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
-
 	NAVEEN: Notifs{
 		Include:  []string{"Rose St", "Rose Street", "Ruth Acty", "King Middle"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD, ALBANY, EMERYVILLE},
 	},
-
 	MARC: Notifs{
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
@@ -452,11 +453,14 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	// determine channel
+	// determine channel		
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
-	if !ok {
-		channelID = defaultChannelID
-	}
+	switch {
+	case !ok && strings.ToLower(meta.ShortName) == BACKUP_SHORTNAME: // use backup channel
+		channelID = backupChannelID
+	case !ok: 
+		channelID = defaultChannelID			
+	}	
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions
