@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"	
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
@@ -34,24 +34,24 @@ import (
 type SlackChannelID string
 
 const (
-	UCPD       SlackChannelID = "C06J8T3EUP9"
-	BERKELEY   SlackChannelID               = "C06A28PMXFZ"
-	BERKELEY_BACKUP  SlackChannelID         = "C07JLP66D34"
-	OAKLAND          SlackChannelID         = "C070R7LGVDY"
-	ALBANY           SlackChannelID         = "C0713T4KMMX"
-	EMERYVILLE       SlackChannelID         = "C07123TKG3E"
+	UCPD            SlackChannelID = "C06J8T3EUP9"
+	BERKELEY                       = "C06A28PMXFZ"
+	BERKELEY_BACKUP                = "C07JLP66D34"
+	OAKLAND                        = "C070R7LGVDY"
+	ALBANY                         = "C0713T4KMMX"
+	EMERYVILLE                     = "C07123TKG3E"
 )
 
 type SlackUserID string
 
 const (
-	EMILIE SlackUserID = "U06H9NA2L4V"
-	MARC               = "U03FTUS9SSD"
-	NAVEEN             = "U0531U1RY1W"
-	JOSE               = "U073Q372CP9"
-	STEPHAN            = "U06UWE5EDAT"
+	EMILIE  SlackUserID = "U06H9NA2L4V"
+	MARC                = "U03FTUS9SSD"
+	NAVEEN              = "U0531U1RY1W"
+	JOSE                = "U073Q372CP9"
+	STEPHAN             = "U06UWE5EDAT"
 
-	BACKUP_SHORTNAME   = "berkeley_backup"
+	BACKUP_SHORTNAME = "berkeley_backup"
 )
 
 var (
@@ -64,7 +64,7 @@ var (
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech"}
 
-	defaultChannelID = BERKELEY // #scanner-dispatches
+	defaultChannelID = BERKELEY        // #scanner-dispatches
 	backupChannelID  = BERKELEY_BACKUP // #scanner-dispatches-backup
 
 	talkgroupToChannel = map[int64]SlackChannelID{
@@ -153,8 +153,8 @@ var notifsMap = map[SlackUserID]Notifs{
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
-	JOSE: Notifs {
-		Include: []string {"accident", "collision", "crash", "crashed", "crashes"},
+	JOSE: Notifs{
+		Include:  []string{"accident", "collision", "crash", "crashed", "crashes"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{OAKLAND},
 	},
@@ -210,7 +210,7 @@ func main() {
 	if openaiKey == "" {
 		log.Fatalf("Missing OPENAI_API_KEY")
 	}
-	
+
 	openaiCli := openai.NewClient(openaiKey)
 
 	// s3 setup
@@ -308,7 +308,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 
 	// fire goroutine and return to unblock client resources
 	go func() {
-		
+
 		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
 		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
 		if err != nil {
@@ -322,15 +322,15 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		defer writer.Close()
-		
+
 		writer.WriteField("key", rdioScannerSecret)
 		writer.WriteField("meta", string(callJson))
 		writer.WriteField("system", "1000") // "eastbay" system
-		part, _ := writer.CreateFormFile("audio", filename)		
-		
+		part, _ := writer.CreateFormFile("audio", filename)
+
 		io.Copy(part, bytes.NewBuffer(data))
 		writer.Close()
-		
+
 		uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
 		res, err := http.Post(uri, writer.FormDataContentType(), body)
 		if err != nil {
@@ -339,7 +339,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		}
 		resBody, _ := io.ReadAll(res.Body)
 		defer res.Body.Close()
-		
+
 		if res.StatusCode > 299 {
 			fmt.Printf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, resBody)
 		}
@@ -357,7 +357,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	} else {
 		msg = "Error transcribing text: " + err.Error()
 	}
-	
+
 	metadata.AudioText = msg
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
@@ -376,12 +376,11 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (string, error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 	resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
-		Model:       openai.Whisper1,
-		Prompt:      prompt,
-		Language:    "en",
-		FilePath:    "audio.wav",
-		Reader:      reader,
-		
+		Model:    openai.Whisper1,
+		Prompt:   prompt,
+		Language: "en",
+		FilePath: "audio.wav",
+		Reader:   reader,
 	})
 	if err != nil {
 		return "", err
@@ -391,7 +390,7 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 		// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
 		if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
 			// silent segment
-			continue	
+			continue
 		}
 		text += segment.Text
 	}
@@ -402,7 +401,7 @@ func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (stri
 		return "", errors.New("Audio quality too low")
 	default:
 		return text, nil
-	}	
+	}
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -412,7 +411,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	s3Meta["short-name"] = aws.String(meta.ShortName)
 	s3Meta["call-length"] = aws.String(strconv.FormatInt(meta.CallLength, 10))
 	s3Meta["talk-group"] = aws.String(strconv.FormatInt(meta.Talkgroup, 10))
-	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))	
+	s3Meta["priority"] = aws.String(strconv.FormatInt(meta.Priority, 10))
 
 	input := &s3manager.UploadInput{
 		Bucket:      aws.String("scanner-berkeley"),         // bucket's name
@@ -432,7 +431,7 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		return nil
 	}
 	if meta.AudioText == "" {
-		meta.AudioText = "Could not transcribe audio"		
+		meta.AudioText = "Could not transcribe audio"
 	}
 
 	blocks := strings.Split(meta.AudioText, ". ")
@@ -453,14 +452,15 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	// determine channel		
+	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
+	shortName := strings.TrimSpace(strings.ToLower(meta.ShortName))
 	switch {
-	case !ok && strings.ToLower(meta.ShortName) == BACKUP_SHORTNAME: // use backup channel
+	case !ok && shortName == BACKUP_SHORTNAME: // use backup channel
 		channelID = backupChannelID
-	case !ok: 
-		channelID = defaultChannelID			
-	}	
+	case !ok:
+		channelID = defaultChannelID
+	}
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions
