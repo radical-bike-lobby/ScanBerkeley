@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/hashicorp/golang-lru/v2/expirable"
+	lru "github.com/hashicorp/golang-lru/v2"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
@@ -179,9 +179,16 @@ type Config struct {
 	webhookUrlUCPD string
 }
 
+var dedupeCache *lru.Cache[string, bool]
+
 func init() {
 	var err error
 	location, err = time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		panic(err)
+	}
+
+	dedupeCache, err = lru.New[string, bool](1000)
 	if err != nil {
 		panic(err)
 	}
@@ -426,8 +433,6 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
-var dedupeCache = expirable.NewLRU[string, bool](1000, nil)
-
 func postToSlack(ctx context.Context, config *Config, key string, reader io.Reader, meta Metadata) error {
 	if config.slackClient == nil {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
@@ -458,22 +463,22 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	// dedupe primary berkeley channel dispatches
 	var srcs string
 	for _, src := range meta.SrcList {
-		srcs += fmt.Println("." + src.Src)
+		srcs += fmt.Sprintf(".%v", src.Src)
 	}
-	key := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
+	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
 
 	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
 
 	switch {
-	case dedupeCache.Contains(key): // ignore dupes
-		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", key, meta.AudioText)
+	case dedupeCache.Contains(dedupeKey): // ignore dupes
+		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", dedupeKey, meta.AudioText)
 		return nil
 	case !ok:
 		channelID = defaultChannelID
 	}
 
-	dedupeCache.Add(key, true)
+	dedupeCache.Add(dedupeKey, true)
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions
