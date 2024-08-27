@@ -50,7 +50,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": false
+      "enabled": true
     },
     {
       "control_channels": [
@@ -71,7 +71,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": true
+      "enabled": false
     },
     {
       "control_channels": [
@@ -92,7 +92,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": true
+      "enabled": false
     },
     {
       "control_channels": [
@@ -113,7 +113,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": true
+      "enabled": false
     },
     {
       "control_channels": [
@@ -134,7 +134,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": true
+      "enabled": false
     }
   ]
 }
