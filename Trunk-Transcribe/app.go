@@ -35,8 +35,8 @@ type SlackChannelID string
 
 const (
 	UCPD            SlackChannelID = "C06J8T3EUP9"
-	BERKELEY                       = "C06A28PMXFZ"
-	BERKELEY_BACKUP                = "C07JLP66D34"
+	BERKELEY        SlackChannelID = "C06A28PMXFZ"
+	BERKELEY_BACKUP SlackChannelID = "C07JLP66D34"
 	OAKLAND                        = "C070R7LGVDY"
 	ALBANY                         = "C0713T4KMMX"
 	EMERYVILLE                     = "C07123TKG3E"
