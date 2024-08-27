@@ -311,7 +311,7 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	}
 
 	if dedupeDispatch(meta) {
-		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", meta.Talkgroup, meta.AudioText)
+		log.Printf("Ignoring duplicate dispatch: %d, \n%s\n", meta.Talkgroup, meta.AudioText)
 		return nil
 	}
 
