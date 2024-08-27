@@ -469,6 +469,9 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 
 	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
+	if !ok {
+		channelID = defaultChannelID
+	}
 
 	switch {
 	case dedupeCache.Contains(dedupeKey): // ignore dupes
