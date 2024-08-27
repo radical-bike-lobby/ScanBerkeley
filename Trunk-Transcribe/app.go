@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
@@ -425,6 +426,8 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
+var dedupeCache = expirable.NewLRU[string, bool](1000, nil)
+
 func postToSlack(ctx context.Context, config *Config, key string, reader io.Reader, meta Metadata) error {
 	if config.slackClient == nil {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
@@ -452,15 +455,25 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
+	// dedupe primary berkeley channel dispatches
+	var srcs string
+	for _, src := range meta.SrcList {
+		srcs += fmt.Println("." + src.Src)
+	}
+	key := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
+
 	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
-	shortName := strings.TrimSpace(strings.ToLower(meta.ShortName))
+
 	switch {
-	case !ok && shortName == BACKUP_SHORTNAME: // use backup channel
-		channelID = backupChannelID
+	case dedupeCache.Contains(key): // ignore dupes
+		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", key, meta.AudioText)
+		return nil
 	case !ok:
 		channelID = defaultChannelID
 	}
+
+	dedupeCache.Add(key, true)
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions
