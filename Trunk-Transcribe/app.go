@@ -356,21 +356,22 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	return nil
 }
 
-// dedupe dispatches
+// dedupeDispatch checks if the specified dispatch (described by its metadata) has already been seen.
+// Returns true if the dispatch is a duplicate, false otherwise.
 func dedupeDispatch(meta Metadata) (dupe bool) {
 
+	// construct a cache key consisting of all the srcs (parties in the call),
+	// the talkgroup, and the startime
 	var srcs string
 	for _, src := range meta.SrcList {
 		srcs += fmt.Sprintf(".%v", src.Src)
 	}
 	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
 
-	if dedupeCache.Contains(dedupeKey) {
-		return true
-	}
-
-	dedupeCache.Add(dedupeKey, true)
-	return false
+	// atomically check-or-set. Return whether the key already existed.
+	exists, _ := dedupeCache.ContainsOrAdd(dedupeKey, true)
+	
+	return exists
 }
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
