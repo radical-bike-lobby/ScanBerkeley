@@ -35,12 +35,11 @@ import (
 type SlackChannelID string
 
 const (
-	UCPD            SlackChannelID = "C06J8T3EUP9"
-	BERKELEY        SlackChannelID = "C06A28PMXFZ"
-	BERKELEY_BACKUP SlackChannelID = "C07JLP66D34"
-	OAKLAND                        = "C070R7LGVDY"
-	ALBANY                         = "C0713T4KMMX"
-	EMERYVILLE                     = "C07123TKG3E"
+	UCPD       SlackChannelID = "C06J8T3EUP9"
+	BERKELEY   SlackChannelID = "C06A28PMXFZ"
+	OAKLAND                   = "C070R7LGVDY"
+	ALBANY                    = "C0713T4KMMX"
+	EMERYVILLE                = "C07123TKG3E"
 )
 
 type SlackUserID string
@@ -51,8 +50,6 @@ const (
 	NAVEEN              = "U0531U1RY1W"
 	JOSE                = "U073Q372CP9"
 	STEPHAN             = "U06UWE5EDAT"
-
-	BACKUP_SHORTNAME = "berkeley_backup"
 )
 
 var (
@@ -65,8 +62,7 @@ var (
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
 	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech"}
 
-	defaultChannelID = BERKELEY        // #scanner-dispatches
-	backupChannelID  = BERKELEY_BACKUP // #scanner-dispatches-backup
+	defaultChannelID = BERKELEY // #scanner-dispatches
 
 	talkgroupToChannel = map[int64]SlackChannelID{
 		3605: UCPD, // UCB PD1 : #scanner-dispatches-ucpd
@@ -314,9 +310,13 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		return err
 	}
 
+	if dedupeDispatch(meta) {
+		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", meta.Talkgroup, meta.AudioText)
+		return nil
+	}
+
 	// fire goroutine and return to unblock client resources
 	go func() {
-
 		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
 		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
 		if err != nil {
@@ -354,6 +354,23 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	}()
 
 	return nil
+}
+
+// dedupe dispatches
+func dedupeDispatch(meta Metadata) (dupe bool) {
+
+	var srcs string
+	for _, src := range meta.SrcList {
+		srcs += fmt.Sprintf(".%v", src.Src)
+	}
+	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
+
+	if dedupeCache.Contains(dedupeKey) {
+		return true
+	}
+
+	dedupeCache.Add(dedupeKey, true)
+	return false
 }
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
@@ -460,28 +477,11 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 		blocks[i] = tag + ": " + block
 	}
 
-	// dedupe primary berkeley channel dispatches
-	var srcs string
-	for _, src := range meta.SrcList {
-		srcs += fmt.Sprintf(".%v", src.Src)
-	}
-	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
-
 	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
 	if !ok {
 		channelID = defaultChannelID
 	}
-
-	switch {
-	case dedupeCache.Contains(dedupeKey): // ignore dupes
-		log.Printf("Ignoring duplicate dispatch: %s, \n%s\n", dedupeKey, meta.AudioText)
-		return nil
-	case !ok:
-		channelID = defaultChannelID
-	}
-
-	dedupeCache.Add(dedupeKey, true)
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 	mentions := slackMeta.Mentions

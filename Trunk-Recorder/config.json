@@ -60,27 +60,6 @@
         774493750
       ],
       "type": "p25",
-      "shortName": "Berkeley_Backup",
-      "talkgroupsFile": "berkeley_talkgroups.csv",
-      "unitTagsFile": "UnitTags.csv",
-      "recordUnknown": false,
-      "hideUnknownTalkgroups": true,
-      "squelch": -50,
-      "modulation": "qpsk",
-      "logLevel": "debug",
-      "audioArchive": true,
-      "callLog": true,
-      "uploadScript": "/app/transcribe.sh",
-      "enabled": false
-    },
-    {
-      "control_channels": [
-        773468750,
-        773743750,
-        774218750,
-        774493750
-      ],
-      "type": "p25",
       "shortName": "Albany",
       "talkgroupsFile": "albany_talkgroups.csv",
       "unitTagsFile": "UnitTags.csv",
@@ -92,7 +71,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": false
+      "enabled": true
     },
     {
       "control_channels": [
@@ -113,7 +92,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": false
+      "enabled": true
     },
     {
       "control_channels": [
@@ -134,7 +113,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": false
+      "enabled": true
     }
   ]
 }
