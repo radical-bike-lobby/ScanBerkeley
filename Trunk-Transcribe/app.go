@@ -369,7 +369,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
 
 	// atomically check-or-set. Return whether the key already existed.
-	exists, _ := dedupeCache.ContainsOrAdd(dedupeKey)
+	exists, _ := dedupeCache.ContainsOrAdd(dedupeKey, true)
 	
 	return exists
 }
