@@ -368,7 +368,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 	}
 	
 	startTime := meta.StartTime - (meta.StartTime % 5) // time to the nearest 5 second increment
-	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, startTime, srcs)
+	dedupeKey := fmt.Sprintf("tg.%d.start.%d.length.%d.srcs%s", meta.Talkgroup, startTime, meta.CallLength, srcs)
 
 	// atomically check-or-set. Return whether the key already existed.
 	exists, _ := dedupeCache.ContainsOrAdd(dedupeKey, true)
