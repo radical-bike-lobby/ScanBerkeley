@@ -366,7 +366,9 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 	for _, src := range meta.SrcList {
 		srcs += fmt.Sprintf(".%v", src.Src)
 	}
-	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, meta.StartTime, srcs)
+	
+	startTime := meta.StartTime - (meta.StartTime % 5) // time to the nearest 5 second increment
+	dedupeKey := fmt.Sprintf("tg.%d.start.%d.srcs%s", meta.Talkgroup, startTime, srcs)
 
 	// atomically check-or-set. Return whether the key already existed.
 	exists, _ := dedupeCache.ContainsOrAdd(dedupeKey, true)
