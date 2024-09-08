@@ -398,7 +398,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 
 	//upload to Cloudflare R2 (with s3 compatible api)
 	wg.Go(func() error { 
-		return uploadS3(gctx, config.r2Uploader, key, bytes.NewReader(data), metadata)
+		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
 	})
 	
 	wg.Go(func() error {
