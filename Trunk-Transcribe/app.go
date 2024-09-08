@@ -273,7 +273,7 @@ func NewMux(config *Config) *http.ServeMux {
 			return
 		}
 
-		result, err := url.JoinPath("https://dxjjyw8z8j16s.cloudfront.net", link[0])
+		result, err := url.JoinPath("https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev", link[0])
 		if err != nil {
 			writeErr(w, err)
 			return
@@ -404,12 +404,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	metadata.AudioText = msg
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
-	wg, gctx := errgroup.WithContext(ctx)
-
-	//upload to S3
-	wg.Go(func() error {
-		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
-	})
+	wg, gctx := errgroup.WithContext(ctx)	
 
 	//upload to Cloudflare R2 (with s3 compatible api)
 	wg.Go(func() error { 
