@@ -170,6 +170,7 @@ var t = template.Must(template.ParseFS(resources, "templates/*"))
 type Config struct {
 	openaiClient   *openai.Client
 	uploader       *s3manager.Uploader
+	r2Uploader     *s3manager.Uploader
 	slackClient    *slack.Client
 	webhookUrl     string
 	webhookUrlUCPD string
@@ -201,6 +202,9 @@ func main() {
 	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
 	webhookUrlUCPD := os.Getenv("SLACK_WEBHOOK_URL_UCPD")
 	slackapiSecret := os.Getenv("SLACK_API_SECRET")
+	cloudflareAccountID := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
+	r2Key := os.Getenv("CLOUDFLARE_R2_KEY")
+	r2Secret := os.Getenv("CLOUDFLARE_R2_SECRET")
 
 	var api *slack.Client
 	if slackapiSecret == "" || webhookUrl == "" {
@@ -217,18 +221,29 @@ func main() {
 
 	openaiCli := openai.NewClient(openaiKey)
 
-	// s3 setup
+	// S3 setup
 	s3Config := &aws.Config{
 		Region:      aws.String("us-west-2"),
 		Credentials: credentials.NewEnvCredentials(),
-	}
-	s3Session := session.New(s3Config)
+	}	
+	uploader := s3manager.NewUploader(session.New(s3Config))
 
-	uploader := s3manager.NewUploader(s3Session)
-
+	
+        // R2 setup
+	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cloudflareAccountID)
+	fmt.Println("Using cloudflare R2 endpoint: ", endpoint)
+	
+	r2Config := &aws.Config{
+		Region:      aws.String("auto"),
+		Credentials: credentials.NewStaticCredentials(r2Key, r2Secret, ""),
+		Endpoint: aws.String(endpoint),		
+	}	
+	r2Uploader := s3manager.NewUploader(session.New(r2Config))
+	
 	config := &Config{
 		openaiClient:   openaiCli,
 		uploader:       uploader,
+		r2Uploader:     r2Uploader,
 		slackClient:    api,
 		webhookUrl:     webhookUrl,
 		webhookUrlUCPD: webhookUrlUCPD,
@@ -390,9 +405,17 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
+
+	//upload to S3
 	wg.Go(func() error {
 		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
 	})
+
+	//upload to Cloudflare R2 (with s3 compatible api)
+	wg.Go(func() error { 
+		return uploadS3(gctx, config.r2Uploader, key, bytes.NewReader(data), metadata)
+	})
+	
 	wg.Go(func() error {
 		return postToSlack(gctx, config, key, bytes.NewReader(data), metadata)
 	})
