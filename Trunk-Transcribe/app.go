@@ -169,8 +169,7 @@ var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
 	openaiClient   *openai.Client
-	uploader       *s3manager.Uploader
-	r2Uploader     *s3manager.Uploader
+	uploader       *s3manager.Uploader	
 	slackClient    *slack.Client
 	webhookUrl     string
 	webhookUrlUCPD string
@@ -220,14 +219,6 @@ func main() {
 	}
 
 	openaiCli := openai.NewClient(openaiKey)
-
-	// S3 setup
-	s3Config := &aws.Config{
-		Region:      aws.String("us-west-2"),
-		Credentials: credentials.NewEnvCredentials(),
-	}	
-	uploader := s3manager.NewUploader(session.New(s3Config))
-
 	
         // R2 setup
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cloudflareAccountID)
@@ -238,12 +229,11 @@ func main() {
 		Credentials: credentials.NewStaticCredentials(r2Key, r2Secret, ""),
 		Endpoint: aws.String(endpoint),		
 	}	
-	r2Uploader := s3manager.NewUploader(session.New(r2Config))
+	uploader := s3manager.NewUploader(session.New(r2Config))
 	
 	config := &Config{
 		openaiClient:   openaiCli,
-		uploader:       uploader,
-		r2Uploader:     r2Uploader,
+		uploader:       uploader,		
 		slackClient:    api,
 		webhookUrl:     webhookUrl,
 		webhookUrlUCPD: webhookUrlUCPD,
@@ -273,7 +263,7 @@ func NewMux(config *Config) *http.ServeMux {
 			return
 		}
 
-		result, err := url.JoinPath("https://dxjjyw8z8j16s.cloudfront.net", link[0])
+		result, err := url.JoinPath("https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev", link[0])
 		if err != nil {
 			writeErr(w, err)
 			return
@@ -404,16 +394,11 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	metadata.AudioText = msg
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
-	wg, gctx := errgroup.WithContext(ctx)
-
-	//upload to S3
-	wg.Go(func() error {
-		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
-	})
+	wg, gctx := errgroup.WithContext(ctx)	
 
 	//upload to Cloudflare R2 (with s3 compatible api)
 	wg.Go(func() error { 
-		return uploadS3(gctx, config.r2Uploader, key, bytes.NewReader(data), metadata)
+		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
 	})
 	
 	wg.Go(func() error {

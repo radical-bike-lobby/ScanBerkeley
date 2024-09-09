@@ -62,7 +62,7 @@ func TestAudioPlayer(t *testing.T) {
     b, err := ioutil.ReadAll(rr.Body)
     require.NoError(t, err)
 
-    expect := "https://dxjjyw8z8j16s.cloudfront.net/" + filename
+    expect := "https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev/" + filename
 
     assert.Contains(t, string(b), expect, string(b)+"\n\nshould contain:\n\n"+expect)
 }
