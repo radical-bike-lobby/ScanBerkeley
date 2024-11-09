@@ -136,18 +136,18 @@ var (
 
 var notifsMap = map[SlackUserID]Notifs{
 	EMILIE: Notifs{
-		Include:  []string{"auto ped", "auto-ped", "autoped", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
+		Include:  []string{"auto ped", "auto-ped", "autoped","autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun"},
 		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
 	NAVEEN: Notifs{
-		Include:  []string{"auto ped", "auto-ped", "autoped", "Rose St", "Rose Street", "Ruth Acty", "King Middle"},
+		Include:  []string{"hit and run", "auto ped", "auto-ped", "autoped", "autobike", "auto bicycle", "auto-bike", "auto-bicycle", "Rose St", "Rose Street", "Ruth Acty", "King Middle"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD, ALBANY, EMERYVILLE},
 	},
 	MARC: Notifs{
-		Include: []string{"auto ped", "auto-ped", "autoped"},
+		Include: []string{"hit and run", "autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
 	},
