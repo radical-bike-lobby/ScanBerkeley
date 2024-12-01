@@ -50,6 +50,7 @@ const (
 	NAVEEN              = "U0531U1RY1W"
 	JOSE                = "U073Q372CP9"
 	STEPHAN             = "U06UWE5EDAT"
+	HELEN               = "U08155VNVRQ"
 )
 
 var (
@@ -160,6 +161,11 @@ var notifsMap = map[SlackUserID]Notifs{
 		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire", "Shooting", "Shooter", "Shots", "Code 33", "glock"},
 		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Channels: []SlackChannelID{BERKELEY, UCPD},
+	},
+	HELEN: Notifs{
+		Include: []string{"hit and run", "autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "marin", "hopkins"},
+		Regex:    versusRegex,
+		Channels: []SlackChannelID{BERKELEY},
 	},
 }
 
