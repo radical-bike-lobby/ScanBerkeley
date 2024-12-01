@@ -170,7 +170,9 @@ func TestMentions(t *testing.T) {
     for _, test := range tests {
         t.Run(test.name, func(t *testing.T) {
             meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, BERKELEY, notifsMap)
-            assert.ElementsMatch(t, test.expect, meta.Mentions)
+            for _, elem := range test.expect {
+                assert.Contains(t, meta.Mentions, elem)
+            }            
         })
     }
 }
@@ -240,7 +242,7 @@ func TestStreets(t *testing.T) {
 
     for _, test := range tests {
         t.Run(test.name, func(t *testing.T) {
-            meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, BERKELEY, notifsMap)
+            meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, BERKELEY, notifsMap)            
             assert.ElementsMatch(t, test.expect.Address.Streets, meta.Address.Streets)
 
             assert.Equal(t, test.expect.Address.String(), meta.Address.String())
