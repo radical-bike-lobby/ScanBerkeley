@@ -3,8 +3,7 @@ module github.com/radical-bike-lobby/trunk-transcribe
 go 1.22.6
 
 require (
-	github.com/aws/aws-sdk-go v1.48.16
-	github.com/sashabaranov/go-openai v1.26.1
+	github.com/aws/aws-sdk-go v1.48.16	
 	github.com/slack-go/slack v0.12.3
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sync v0.5.0
