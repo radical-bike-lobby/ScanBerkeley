@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -169,6 +170,11 @@ var notifsMap = map[SlackUserID]Notifs{
 	},
 }
 
+// cloudflare setup
+var cloudflareApiKey string = os.Getenv("CLOUDFLARE_API_TOKEN")
+var cloudflareAccountId string = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
+var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts/"+cloudflareAccountId+"/ai/run/@cf/openai/whisper-large-v3-turbo"
+
 //go:embed templates/*
 var resources embed.FS
 
@@ -183,6 +189,7 @@ type Config struct {
 }
 
 var dedupeCache *lru.Cache[string, bool]
+
 
 func init() {
 	var err error
@@ -225,7 +232,7 @@ func main() {
 		log.Fatalf("Missing OPENAI_API_KEY")
 	}
 
-	openaiCli := openai.NewClient(openaiKey)
+	openaiCli := openai.NewClient(openaiKey)	
 	
         // R2 setup
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cloudflareAccountID)
@@ -391,7 +398,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	msg, err := whisper(ctx, config.openaiClient, bytes.NewReader(data))
+	msg, err := whisper(ctx, config.openaiClient, data)
 	if err == nil {
 		fmt.Println(key+": ", msg)
 	} else {
@@ -416,14 +423,38 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 }
 
 // whisper transcribes the audio with openai Whisper
-func whisper(ctx context.Context, client *openai.Client, reader io.Reader) (string, error) {
-	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
+func whisper(ctx context.Context, client *openai.Client, data []byte) (string, error) {
+	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")	
+	
+	enc := base64.StdEncoding.EncodeToString(data)
+	payload, err := json.Marshal(CloudflareWhisperInput {
+		Audio: enc,
+		Prompt: prompt,
+	})
+	
+	if err != nil {
+		return "", err
+	}
+	req := NewRequestWithContext(ctx, "POST", cloudflareWhisperUrl, bytes.NewReader(payload))
+
+	go func(){	
+		cResp, cerr := http.DefaultClient.Do(req)
+		if cerr != nil {
+			fmt.Printf("Error calling cloudflare: %v\n", cerr)
+			return 
+		}
+		defer cResp.Body.Close()
+		body, _ := io.ReadAll(cResp.Body)	
+		fmt.Println("Response from cloudflare: ", string(body))
+	}()
+
+	// OpenAI call
 	resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
 		Model:    openai.Whisper1,
 		Prompt:   prompt,
 		Language: "en",
 		FilePath: "audio.wav",
-		Reader:   reader,
+		Reader:   bytes.NewReader(data),
 	})
 	if err != nil {
 		return "", err
@@ -744,4 +775,10 @@ func (addr Address) String() string {
 	default:
 		return ""
 	}
+}
+
+type CloudflareWhisperInput struct {
+	Audio string 	`json:"audio,omitempty"`
+	Prompt string 	`json:"initial_prompt,omitempty"`
+	Prefix string   `json:"prefix,omitempty"`
 }
