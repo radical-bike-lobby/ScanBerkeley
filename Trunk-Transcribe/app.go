@@ -440,46 +440,50 @@ func whisper(ctx context.Context, client *openai.Client, data []byte) (string, e
 		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer " + cloudflareApiToken)
-	
-	go func(){	
-		cResp, cerr := http.DefaultClient.Do(req)
-		if cerr != nil {
-			fmt.Printf("Error calling cloudflare: %v\n", cerr)
-			return 
-		}
-		defer cResp.Body.Close()
-		body, _ := io.ReadAll(cResp.Body)	
-		fmt.Println("Response from cloudflare: ", string(body))
-	}()
-
-	// OpenAI call
-	resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
-		Model:    openai.Whisper1,
-		Prompt:   prompt,
-		Language: "en",
-		FilePath: "audio.wav",
-		Reader:   bytes.NewReader(data),
-	})
+		
+	cResp, cerr := http.DefaultClient.Do(req)
+	if cerr != nil {
+		fmt.Printf("Error calling cloudflare: %v\n", cerr)
+		return 
+	}
+	defer cResp.Body.Close()
+	var output CloudflareWhisperOutput
+	body, _ := io.ReadAll(cResp.Body)
+	err := json.Unmarshall(body, &output)
 	if err != nil {
 		return "", err
 	}
-	text := ""
-	for _, segment := range resp.Segments {
-		// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
-		if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
-			// silent segment
-			continue
-		}
-		text += segment.Text
-	}
-	switch {
-	case len(resp.Segments) == 0:
-		return resp.Text, nil
-	case text == "":
-		return "", errors.New("Audio quality too low")
-	default:
-		return text, nil
-	}
+	fmt.Println("Response from cloudflare: ", output)
+	return output.Text, nil
+	
+	// OpenAI call
+	// resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
+	// 	Model:    openai.Whisper1,
+	// 	Prompt:   prompt,
+	// 	Language: "en",
+	// 	FilePath: "audio.wav",
+	// 	Reader:   bytes.NewReader(data),
+	// })
+	// if err != nil {
+	// 	return "", err
+	// }
+	// text := ""
+	// for _, segment := range resp.Segments {
+	// 	// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
+	// 	if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
+	// 		// silent segment
+	// 		continue
+	// 	}
+	// 	text += segment.Text
+	// }
+	// switch {
+	// case len(resp.Segments) == 0:
+	// 	return resp.Text, nil
+	// case text == "":
+	// 	return "", errors.New("Audio quality too low")
+	// default:
+	// 	return text, nil
+	// }
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -781,8 +785,23 @@ func (addr Address) String() string {
 	}
 }
 
+
+type TranscriptionInfo struct {
+	Language string  `json:"language,omitempty"`
+	Duration string  `json:"duration,omitempty"`
+	Text     string  `json:"text,omitempty"`
+	WordCount int    `json:"word_count,omitempty"`
+}
+
 type CloudflareWhisperInput struct {
 	Audio string 	`json:"audio,omitempty"`
 	Prompt string 	`json:"initial_prompt,omitempty"`
 	Prefix string   `json:"prefix,omitempty"`
+}
+
+type CloudflareWhisperOutput struct {
+	Result TranscriptionInfo `json:"result,omitempty"`
+	Success bool             `json:"success,omitempty"`
+	Errors  []string         `json:"errors,omitempty"`
+	Messages []string        `json:"messages,omitempty"`
 }
