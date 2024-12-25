@@ -171,7 +171,7 @@ var notifsMap = map[SlackUserID]Notifs{
 }
 
 // cloudflare setup
-var cloudflareApiKey string = os.Getenv("CLOUDFLARE_API_TOKEN")
+var cloudflareApiToken string = os.Getenv("CLOUDFLARE_API_TOKEN")
 var cloudflareAccountID string = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
 var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts/"+cloudflareAccountID+"/ai/run/@cf/openai/whisper-large-v3-turbo"
 var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
@@ -439,6 +439,7 @@ func whisper(ctx context.Context, client *openai.Client, data []byte) (string, e
 	if err != nil {
 		return "", err
 	}
+	req.Header.Set("Authorization", "Bearer " + cloudflareApiToken)
 	
 	go func(){	
 		cResp, cerr := http.DefaultClient.Do(req)
