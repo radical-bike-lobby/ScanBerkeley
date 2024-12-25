@@ -429,14 +429,17 @@ func whisper(ctx context.Context, data []byte) (string, error) {
 	}
 	req.Header.Set("Authorization", "Bearer " + cloudflareApiToken)
 		
-	cResp, cerr := http.DefaultClient.Do(req)
-	if cerr != nil {
-		fmt.Printf("Error calling cloudflare: %v\n", cerr)
-		return 
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("Error calling cloudflare: %v\n", err)
+		return "", err
 	}
-	defer cResp.Body.Close()
+	defer resp.Body.Close()
 	var output CloudflareWhisperOutput
-	body, _ := io.ReadAll(cResp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 	err := json.Unmarshall(body, &output)
 	if err != nil {
 		return "", err
