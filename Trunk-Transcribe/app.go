@@ -27,8 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	lru "github.com/hashicorp/golang-lru/v2"
-	openai "github.com/sashabaranov/go-openai"
+	lru "github.com/hashicorp/golang-lru/v2"	
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
 )
@@ -177,8 +176,6 @@ var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts
 var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
 var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
 
-var openaiKey string = os.Getenv("OPENAI_API_KEY")
-
 // slack setup
 var webhookUrl string = os.Getenv("SLACK_WEBHOOK_URL")
 var webhookUrlUCPD string = os.Getenv("SLACK_WEBHOOK_URL_UCPD")
@@ -189,8 +186,7 @@ var resources embed.FS
 
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
-type Config struct {
-	openaiClient   *openai.Client
+type Config struct {	
 	uploader       *s3manager.Uploader	
 	slackClient    *slack.Client
 	webhookUrl     string
@@ -225,14 +221,7 @@ func main() {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
 	} else {
 		api = slack.New(slackapiSecret)
-	}
-
-	// openai setup	
-	if openaiKey == "" {
-		log.Fatalf("Missing OPENAI_API_KEY")
-	}
-
-	openaiCli := openai.NewClient(openaiKey)	
+	}	
 	
         // R2 setup
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cloudflareAccountID)
@@ -245,8 +234,7 @@ func main() {
 	}	
 	uploader := s3manager.NewUploader(session.New(r2Config))
 	
-	config := &Config{
-		openaiClient:   openaiCli,
+	config := &Config{		
 		uploader:       uploader,		
 		slackClient:    api,
 		webhookUrl:     webhookUrl,
@@ -398,7 +386,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	msg, err := whisper(ctx, config.openaiClient, data)
+	msg, err := whisper(ctx, data)
 	if err == nil {
 		fmt.Println(key+": ", msg)
 	} else {
@@ -422,8 +410,8 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	return msg, err
 }
 
-// whisper transcribes the audio with openai Whisper
-func whisper(ctx context.Context, client *openai.Client, data []byte) (string, error) {
+// whisper transcribes the audio with cloudflare Whisper
+func whisper(ctx context.Context, data []byte) (string, error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")	
 	
 	enc := base64.StdEncoding.EncodeToString(data)
@@ -454,36 +442,7 @@ func whisper(ctx context.Context, client *openai.Client, data []byte) (string, e
 		return "", err
 	}
 	fmt.Println("Response from cloudflare: ", output)
-	return output.Text, nil
-	
-	// OpenAI call
-	// resp, err := client.CreateTranscription(ctx, openai.AudioRequest{
-	// 	Model:    openai.Whisper1,
-	// 	Prompt:   prompt,
-	// 	Language: "en",
-	// 	FilePath: "audio.wav",
-	// 	Reader:   bytes.NewReader(data),
-	// })
-	// if err != nil {
-	// 	return "", err
-	// }
-	// text := ""
-	// for _, segment := range resp.Segments {
-	// 	// https://platform.openai.com/docs/api-reference/audio/verbose-json-object
-	// 	if segment.AvgLogprob < -1.0 && segment.NoSpeechProb > 1.0 {
-	// 		// silent segment
-	// 		continue
-	// 	}
-	// 	text += segment.Text
-	// }
-	// switch {
-	// case len(resp.Segments) == 0:
-	// 	return resp.Text, nil
-	// case text == "":
-	// 	return "", errors.New("Audio quality too low")
-	// default:
-	// 	return text, nil
-	// }
+	return output.Text, nil	
 }
 
 // transcribeAndUpload uploads the audio to S3
