@@ -440,12 +440,12 @@ func whisper(ctx context.Context, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err := json.Unmarshall(body, &output)
+	err = json.Unmarshal(body, &output)
 	if err != nil {
 		return "", err
 	}
 	fmt.Println("Response from cloudflare: ", output)
-	return output.Text, nil	
+	return output.Result.Text, nil	
 }
 
 // transcribeAndUpload uploads the audio to S3
