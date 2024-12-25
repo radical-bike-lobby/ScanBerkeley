@@ -172,8 +172,17 @@ var notifsMap = map[SlackUserID]Notifs{
 
 // cloudflare setup
 var cloudflareApiKey string = os.Getenv("CLOUDFLARE_API_TOKEN")
-var cloudflareAccountId string = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts/"+cloudflareAccountId+"/ai/run/@cf/openai/whisper-large-v3-turbo"
+var cloudflareAccountID string = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
+var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts/"+cloudflareAccountID+"/ai/run/@cf/openai/whisper-large-v3-turbo"
+var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
+var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
+
+var openaiKey string = os.Getenv("OPENAI_API_KEY")
+
+// slack setup
+var webhookUrl string = os.Getenv("SLACK_WEBHOOK_URL")
+var webhookUrlUCPD string = os.Getenv("SLACK_WEBHOOK_URL_UCPD")
+var slackapiSecret string = os.Getenv("SLACK_API_SECRET")	
 
 //go:embed templates/*
 var resources embed.FS
@@ -210,15 +219,7 @@ func main() {
 		port = "8080"
 
 	}
-
-	// slack setup
-	webhookUrl := os.Getenv("SLACK_WEBHOOK_URL")
-	webhookUrlUCPD := os.Getenv("SLACK_WEBHOOK_URL_UCPD")
-	slackapiSecret := os.Getenv("SLACK_API_SECRET")
-	cloudflareAccountID := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-	r2Key := os.Getenv("CLOUDFLARE_R2_KEY")
-	r2Secret := os.Getenv("CLOUDFLARE_R2_SECRET")
-
+	
 	var api *slack.Client
 	if slackapiSecret == "" || webhookUrl == "" {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
@@ -226,8 +227,7 @@ func main() {
 		api = slack.New(slackapiSecret)
 	}
 
-	// openai setup
-	openaiKey := os.Getenv("OPENAI_API_KEY")
+	// openai setup	
 	if openaiKey == "" {
 		log.Fatalf("Missing OPENAI_API_KEY")
 	}
