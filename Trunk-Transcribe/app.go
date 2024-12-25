@@ -435,7 +435,7 @@ func whisper(ctx context.Context, client *openai.Client, data []byte) (string, e
 	if err != nil {
 		return "", err
 	}
-	req := NewRequestWithContext(ctx, "POST", cloudflareWhisperUrl, bytes.NewReader(payload))
+	req := http.NewRequestWithContext(ctx, "POST", cloudflareWhisperUrl, bytes.NewReader(payload))
 
 	go func(){	
 		cResp, cerr := http.DefaultClient.Do(req)
