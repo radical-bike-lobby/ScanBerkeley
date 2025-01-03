@@ -61,7 +61,7 @@ var (
 	versusRegex  = regexp.MustCompile(modeString + `.+(vs|versus|verses)(\.)?.+` + modeString)
 	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "LeConte", "LeRoy", "Hilgard", "Mabel", "Marin", "Martin", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "San Pablo", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
-	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", “ring on three”, “code 4”, “code 34”, “en route”, “case number”, “berry brothers”, “rita run”, “DBF”, “Flock camera”, “10-four”, “10-4”, “10 four”, “Hs Lordships”, “Cesar Chavez Park”, “10-9 your traffic”, “copy,” “tow”}
+	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", "ring on three", "code 4", "code 34", "en route", "case number", "berry brothers", "rita run", "DBF", "Flock camera", "10-four”, "10-4", "10 four", "His Lordships", "Cesar Chavez Park", "10-9 your traffic", "copy", "tow”}
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
 
@@ -137,7 +137,7 @@ var (
 
 var notifsMap = map[SlackUserID]Notifs{
 	EMILIE: Notifs{
-		Include:  []string{"auto ped", "auto-ped", "autoped","autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", “flock”, “spikes”, “challenging”, “beeper”, “cage”, “tom”, “register”, “1033 frank”, “1033f”, “1033”, “10-33 frank”},
+		Include:  []string{"auto ped", "auto-ped", "autoped","autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", "flock", "spikes", "challenging", "beeper", "cage", "tom", "register", "1033 frank", "1033f", "1033", "10-33 frank"},
 		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
