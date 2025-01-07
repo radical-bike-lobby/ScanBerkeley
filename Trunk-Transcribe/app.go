@@ -430,20 +430,12 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 		genai.Text("Ignore silences."),
 		genai.Text("Here are some correction terms: " + prompt),
 	}
-
-	model := client.GenerativeModel("gemini-1.5-pro")
-	// Generate content using the prompt.
+	
+	model := client.GenerativeModel("gemini-1.5-pro")	
 	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Handle the response of generated text
-
-	b, _ := json.MarshalIndent(resp, "", " ")
-	fmt.Println(string(b))
-
-	var buf strings.Builder
+		return "", err
+	}	
 
 	var transcriptionParts []string
 	for _, c := range resp.Candidates {
