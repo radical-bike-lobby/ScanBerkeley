@@ -421,6 +421,7 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer client.Close()
 
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 	parts := []genai.Part{
