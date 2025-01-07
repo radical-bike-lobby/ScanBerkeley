@@ -390,7 +390,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	msg, err := gemini(ctx, data)
+	msg, err := whisper(ctx, data)
 
 	if err == nil {
 		fmt.Println(key+": ", msg)
