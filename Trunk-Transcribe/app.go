@@ -445,17 +445,22 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 
 	var buf strings.Builder
 
+	var transcriptionParts []string
 	for _, c := range resp.Candidates {
-		if c.Content != nil {
-			for _, part := range c.Content.Parts {
-				fmt.Fprintf(&buf, "%v", part)
-				buf.WriteString("\n")
+		if c.Content == nil {
+			continue
+		}
+		for _, part := range c.Content.Parts {
+			line := fmt.Sprintf("%v", part)
+			if strings.TrimSpace(line) == "" {
+				continue
 			}
+			transcriptionParts = append(transcriptionParts, line)
 		}
 	}
 
-	fmt.Println(buf.String())
-	return buf.String(), nil
+	msg := strings.Join(transcriptionParts, "\n")
+	return msg, nil
 }
 
 // whisper transcribes the audio with cloudflare Whisper
