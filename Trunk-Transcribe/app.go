@@ -390,7 +390,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	msg, err := whisper(ctx, data)
+	msg, err := gemini(ctx, data)
 
 	if err == nil {
 		fmt.Println(key+": ", msg)
@@ -400,13 +400,6 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 
 	metadata.AudioText = msg
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
-
-	gmsg, gerr := gemini(ctx, data)
-	if gerr != nil {
-		fmt.Println("Error with gemini: ", gerr)
-	} else {
-		fmt.Println("Gemini response: ", gmsg)
-	}
 
 	wg, gctx := errgroup.WithContext(ctx)
 
@@ -446,7 +439,9 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 	parts := []genai.Part{
 		genai.Blob{MIMEType: "audio/mp3", Data: data},
-		genai.Text("Please transcribe the audio. " + prompt),
+		genai.Text("Please transcribe the audio. "),
+		genai.Text("Ignore silences."),
+		genai.Text("Here are some correction terms: " + prompt),
 	}
 
 	model := client.GenerativeModel("gemini-1.5-pro")
