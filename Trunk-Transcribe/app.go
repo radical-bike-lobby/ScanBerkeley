@@ -390,8 +390,8 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	// msg, err := whisper(ctx, data)
-	msg, err := gemini(ctx, data)
+	msg, err := whisper(ctx, data)
+
 	if err == nil {
 		fmt.Println(key+": ", msg)
 	} else {
@@ -400,6 +400,13 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 
 	metadata.AudioText = msg
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
+
+	gmsg, gerr := gemini(ctx, data)
+	if gerr != nil {
+		fmt.Println("Error with gemini: ", gerr)
+	} else {
+		fmt.Println("Gemini response: ", gmsg)
+	}
 
 	wg, gctx := errgroup.WithContext(ctx)
 
@@ -438,8 +445,8 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 	parts := []genai.Part{
-		genai.Blob{MIMEType: "audio/wav", Data: data},
-		genai.Text("Please transcribe. Zero. " + prompt),
+		genai.Blob{MIMEType: "audio/mp3", Data: data},
+		genai.Text("Please transcribe the audio. " + prompt),
 	}
 
 	model := client.GenerativeModel("gemini-1.5-pro")
@@ -451,6 +458,9 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 
 	// Handle the response of generated text
 
+	b, _ := json.MarshalIndent(resp, "", " ")
+	fmt.Println(string(b))
+
 	var buf strings.Builder
 
 	for _, c := range resp.Candidates {
@@ -459,7 +469,6 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 				fmt.Fprintf(&buf, "%v", part)
 				buf.WriteString("\n")
 			}
-
 		}
 	}
 
