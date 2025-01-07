@@ -417,20 +417,6 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 
 func gemini(ctx context.Context, data []byte) (string, error) {
 
-	// remove silence
-	// segment, err := gaudio.LoadAudio(bytes.NewReader(data), gaudio.FormatWAVE)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// // Get leading and trailing silence
-	// segment.RemoveStartAndEndSilence(threshold)
-	// buffer := new(bytes.Buffer)
-	// err = segment.Export(buffer, gaudio.FormatWAVE)
-	// if err != nil {
-	// 	return "", err
-	// }
-
 	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiApiKey))
 	if err != nil {
 		return "", err
