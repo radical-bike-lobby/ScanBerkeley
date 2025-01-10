@@ -607,7 +607,7 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 			keyword = strings.ToLower(keyword)
 			sequence := wordsRegex.FindAllString(keyword, -1)
 			for chunk := range slices.Chunk(words, len(sequence)) {
-				if slices.Equal(chunk, sequence)
+				if slices.Equal(chunk, sequence) {
 					slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
 					break match
 				}
