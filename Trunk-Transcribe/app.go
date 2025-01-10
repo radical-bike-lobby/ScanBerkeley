@@ -602,22 +602,17 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 		}
 
 		// check the included keywords
-		matched := false
+		match:
 		for _, keyword := range notifs.Include {
 			keyword = strings.ToLower(keyword)
-			for _, word := range words {
-				if keyword == word {
-					matched = true
-					break
+			sequence := wordsRegex.FindAllString(keyword, -1)
+			for chunk := range slices.Chunk(words, len(sequence)) {
+				if slices.Equal(chunk, sequence)
+					slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
+					break match
 				}
-			}
-			if matched {
-				break
-			}
-		}
-		if matched {
-			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
-		}
+			}			
+		}		
 	}
 
 	// match address
