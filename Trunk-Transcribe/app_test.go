@@ -111,9 +111,14 @@ func TestMentions(t *testing.T) {
             expect:   []string{"<@U06H9NA2L4V>"},
         },
         {
-            name:     "multi word match",
+            name:     "multi word regex match",
             sentance: "Fancroft and Piedmont,we've got a vehicle versus bike, and we've got an involved party on the phone,we've got BFD and RUN as well",
             expect:   []string{"<@U06H9NA2L4V>", "<@U0531U1RY1W>", "<@U03FTUS9SSD>"},
+        },
+        {
+            name:     "multi word term match",
+            sentance: "112, Tom, attach me to the 10-33, Frank, and I'm 10-9-7.",
+            expect:   []string{"<@U06H9NA2L4V>"},
         },
         {
             name:     "versus match - car vs ped",
@@ -164,7 +169,7 @@ func TestMentions(t *testing.T) {
             name:     "hyphen",
             sentance: "Can you mark a 10-15 time? Copy, 16-05",
             expect:   []string{"<@U06H9NA2L4V>"},
-        },
+        },        
     }
 
     for _, test := range tests {
