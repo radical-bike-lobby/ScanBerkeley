@@ -489,7 +489,7 @@ func whisper(ctx context.Context, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("Response from cloudflare: ", output)
+	fmt.Println("Response from cloudflare: ", string(body))
 	return output.Result.Text, nil
 }
 
