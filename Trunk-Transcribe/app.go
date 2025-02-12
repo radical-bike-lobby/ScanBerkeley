@@ -409,7 +409,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	})
 
 	wg.Go(func() error {
-		return postToSlack(gctx, config, key, bytes.NewReader(data), metadata)
+		return postToSlack(gctx, config, key, data, metadata)
 	})
 	err = wg.Wait()
 	return msg, err
@@ -514,7 +514,9 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
-func postToSlack(ctx context.Context, config *Config, key string, reader io.Reader, meta Metadata) error {
+func postToSlack(ctx context.Context, config *Config, key string, data []byte, meta Metadata) error {
+	reader := bytes.NewReader(data)
+	
 	if config.slackClient == nil {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
 		return nil
@@ -564,7 +566,8 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 	// upload audio
 	filename := filepath.Base(key)
 	summary, err := config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
-		Filename:       filename,		
+		Filename:       filename,
+		FileSize:       len(data),
 		Reader:         reader,
 		InitialComment: sentances,
 		Channel:       string(channelID),
