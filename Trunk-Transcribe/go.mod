@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.48.16
 	github.com/google/generative-ai-go v0.19.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/slack-go/slack v0.12.3
+	github.com/slack-go/slack v0.16.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sync v0.7.0
 	google.golang.org/api v0.186.0
