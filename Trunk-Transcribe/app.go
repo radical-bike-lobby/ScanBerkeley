@@ -563,17 +563,16 @@ func postToSlack(ctx context.Context, config *Config, key string, reader io.Read
 
 	// upload audio
 	filename := filepath.Base(key)
-	file, err := config.slackClient.UploadFile(slack.FileUploadParameters{
-		Filename:       filename,
-		Filetype:       "auto",
+	summary, err := config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+		Filename:       filename,		
 		Reader:         reader,
 		InitialComment: sentances,
-		Channels:       []string{string(channelID)},
+		Channel:       string(channelID),
 	})
 	if err != nil {
 		log.Println("Error uploading file to slack: ", err)
 	} else {
-		log.Printf("Uploaded file: %s of type: %s to channel: %v", file.Name, file.Filetype, channelID)
+		log.Printf("Uploaded file: %s with titel: %s to channel: %v", summary.ID, summary.Title, channelID)
 	}
 
 	return err
