@@ -397,7 +397,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 
 	enhanced, enhanceErr := deepFilter(ctx, data)
 	if enhanceErr != nil {
-		log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original.")
+		log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
 	} else {
 		data = enhanced
 	}
