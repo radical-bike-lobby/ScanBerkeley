@@ -334,9 +334,10 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	// fire goroutine and return to unblock client resources
 	go func() {
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx := context.Background()
+		enhanceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
-		enhanced, enhanceErr := deepFilter(ctx, data)
+		enhanced, enhanceErr := deepFilter(enhanceCtx, data)
 		if enhanceErr != nil {
 			log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
 		} else {
