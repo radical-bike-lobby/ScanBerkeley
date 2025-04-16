@@ -333,40 +333,25 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 
 	// fire goroutine and return to unblock client resources
 	go func() {
+
+		enhanced, enhanceErr := deepFilter(ctx, data)
+		if enhanceErr != nil {
+			log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
+		} else {
+			data = enhanced
+		}
+
 		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
 		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
 		if err != nil {
 			fmt.Println("Error transcribing and uploading to slack: ", err.Error())
 		}
-	}()
 
-	// upload to rdio
-	go func() {
-		rdioScannerSecret := os.Getenv("RDIO_SCANNER_API_KEY")
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		defer writer.Close()
-
-		writer.WriteField("key", rdioScannerSecret)
-		writer.WriteField("meta", string(callJson))
-		writer.WriteField("system", "1000") // "eastbay" system
-		part, _ := writer.CreateFormFile("audio", filename)
-
-		io.Copy(part, bytes.NewBuffer(data))
-		writer.Close()
-
-		uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
-		res, err := http.Post(uri, writer.FormDataContentType(), body)
+		err = uploadToRdio(context.Background(), filename, string(callJson), bytes.NewReader(data))
 		if err != nil {
 			fmt.Println("Error uploading to rdio-scanner: ", err.Error())
-			return
 		}
-		resBody, _ := io.ReadAll(res.Body)
-		defer res.Body.Close()
 
-		if res.StatusCode > 299 {
-			fmt.Printf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, resBody)
-		}
 	}()
 
 	return nil
@@ -394,13 +379,6 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
-
-	enhanced, enhanceErr := deepFilter(ctx, data)
-	if enhanceErr != nil {
-		log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
-	} else {
-		data = enhanced
-	}
 
 	msg, err := whisper(ctx, data)
 
@@ -613,10 +591,39 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	if err != nil {
 		log.Println("Error uploading file to slack: ", err)
 	} else {
-		log.Printf("Uploaded file: %s with titel: %s to channel: %v", summary.ID, summary.Title, channelID)
+		log.Printf("Uploaded file: %s with title: %s to channel: %v", summary.ID, summary.Title, channelID)
 	}
 
 	return err
+}
+
+// uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
+func uploadToRdio(ctx context.Context, filename, meta string, reader io.Reader) error {
+	rdioScannerSecret := os.Getenv("RDIO_SCANNER_API_KEY")
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	defer writer.Close()
+
+	writer.WriteField("key", rdioScannerSecret)
+	writer.WriteField("meta", meta)
+	writer.WriteField("system", "1000") // "eastbay" system
+	part, _ := writer.CreateFormFile("audio", filename)
+
+	io.Copy(part, reader)
+	writer.Close()
+
+	uri := "https://rdio-eastbay.fly.dev/api/trunk-recorder-call-upload"
+	res, err := http.Post(uri, writer.FormDataContentType(), body)
+	if err != nil {
+		return err
+	}
+	resBody, _ := io.ReadAll(res.Body)
+	defer res.Body.Close()
+
+	if res.StatusCode > 299 {
+		return fmt.Errorf("Error uploading to rdio-scanner: Response failed with status code: %d and\nbody: %s\n", res.StatusCode, resBody)
+	}
+	return nil
 }
 
 // ExtractSlackMeta returns the list of mentions and an address to append corresponding to matching keywords in the
