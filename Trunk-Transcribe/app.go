@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -53,6 +54,10 @@ const (
 	JOSE                = "U073Q372CP9"
 	STEPHAN             = "U06UWE5EDAT"
 	HELEN               = "U08155VNVRQ"
+)
+
+const (
+	deepFilterCmd = "deep-filter"
 )
 
 var (
@@ -390,6 +395,13 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
+	enhanced, enhanceErr := deepFilter(ctx, data)
+	if enhanceErr != nil {
+		log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original.")
+	} else {
+		data = enhanced
+	}
+
 	msg, err := whisper(ctx, data)
 
 	if err == nil {
@@ -430,12 +442,12 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 		genai.Text("Ignore silences."),
 		genai.Text("Here are some correction terms: " + prompt),
 	}
-	
-	model := client.GenerativeModel("gemini-1.5-pro")	
+
+	model := client.GenerativeModel("gemini-1.5-pro")
 	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
 		return "", err
-	}	
+	}
 
 	var transcriptionParts []string
 	for _, c := range resp.Candidates {
@@ -453,6 +465,32 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 
 	msg := strings.Join(transcriptionParts, "\n")
 	return msg, nil
+}
+
+// deepFilter runs an audio enhancement framework on the data based on the Deepfilter ai model
+func deepFilter(ctx context.Context, data []byte) ([]byte, error) {
+
+	dir := os.TempDir()
+	audioFile, err := os.CreateTemp(dir, "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(audioFile.Name())
+
+	err = os.WriteFile(audioFile.Name(), data, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, deepFilterCmd, "--pf", "-v", "-o", dir, audioFile.Name())
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	return io.ReadAll(audioFile)
 }
 
 // whisper transcribes the audio with cloudflare Whisper
@@ -516,7 +554,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 
 func postToSlack(ctx context.Context, config *Config, key string, data []byte, meta Metadata) error {
 	reader := bytes.NewReader(data)
-	
+
 	if config.slackClient == nil {
 		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
 		return nil
@@ -570,7 +608,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		FileSize:       len(data),
 		Reader:         reader,
 		InitialComment: sentances,
-		Channel:       string(channelID),
+		Channel:        string(channelID),
 	})
 	if err != nil {
 		log.Println("Error uploading file to slack: ", err)
@@ -604,7 +642,7 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 		}
 
 		// check the included keywords
-		match:
+	match:
 		for _, keyword := range notifs.Include {
 			keyword = strings.ToLower(keyword)
 			sequence := wordsRegex.FindAllString(keyword, -1)
@@ -613,8 +651,8 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 					slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
 					break match
 				}
-			}			
-		}		
+			}
+		}
 	}
 
 	// match address
