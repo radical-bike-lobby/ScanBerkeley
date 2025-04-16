@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -16,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
@@ -24,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -57,10 +55,6 @@ const (
 	JOSE                = "U073Q372CP9"
 	STEPHAN             = "U06UWE5EDAT"
 	HELEN               = "U08155VNVRQ"
-)
-
-const (
-	deepFilterCmd = "./deep-filter"
 )
 
 var (
@@ -179,10 +173,6 @@ var notifsMap = map[SlackUserID]Notifs{
 	},
 }
 
-// cloudflare setup
-var cloudflareApiToken string = os.Getenv("CLOUDFLARE_API_TOKEN")
-var cloudflareAccountID string = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-var cloudflareWhisperUrl string = "https://api.cloudflare.com/client/v4/accounts/" + cloudflareAccountID + "/ai/run/@cf/openai/whisper-large-v3-turbo"
 var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
 var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
 
@@ -258,11 +248,17 @@ func main() {
 
 	// start transcription request goroutine pool
 	go func() {
+
 		for req := range ch {
+			var requestsInFlight atomic.Int64
 			wg.Add(1)
+			requestsInFlight.Add(1)
+			fmt.Println("Requests in flight: ", requestsInFlight.Load())
 			go func() {
-				handleTranscriptionRequest(context.Background(), config, req)
+				ctx := context.Background()
+				handleTranscriptionRequest(ctx, config, req)
 				wg.Done()
+				requestsInFlight.Add(-1)
 			}()
 		}
 	}()
@@ -371,17 +367,7 @@ func createTransciptionRequest(ctx context.Context, config *Config, r *http.Requ
 	filename := filepath.Base(header.Filename)
 	data, _ := ioutil.ReadAll(file)
 
-	// if dedupeDispatch(meta) {
-	// 	log.Printf("Ignoring duplicate dispatch: %d, \n%s\n", meta.Talkgroup, meta.AudioText)
-	// 	return nil, nil
-	// }
-
-	req := &TranscriptionRequest{
-		Filename: filename,
-		Data:     data,
-		Meta:     callJson,
-	}
-	return req, nil
+	return NewTranscriptionRequest(filename, data, callJson)
 }
 
 // handleTranscriptionRequest
@@ -393,37 +379,44 @@ func handleTranscriptionRequest(ctx context.Context, config *Config, req *Transc
 	defer func() {
 		duration := time.Now().Sub(start)
 		if err != nil {
-			log.Printf("Failed transcription request [%v]: %s : %v", duration, req.Filename, err)
+			log.Printf("Faileds transcription request [%v]: %s : %v", duration, req.Filename, err)
 		} else {
 			log.Printf("Finished transcription request [%v]: %s", duration, req.Filename)
 		}
 	}()
 
-	var meta Metadata
-	err = json.Unmarshal(req.Meta, &meta)
-	if err != nil {
-		return err
-	}
+	enhanceCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 
-	enhanced, enhanceErr := deepFilter(ctx, req.Data)
+	enhanced, enhanceErr := io.ReadAll(removeSilence(enhanceCtx, req.Data))
+	// enhanced, enhanceErr := deepFilter(enhanceCtx, req.Data)
+
 	if enhanceErr != nil {
 		log.Println("[handleTranscriptionRequest] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
 	} else {
 		req.Data = enhanced
 	}
 
-	filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, req.Filename)
-	_, err = transcribeAndUpload(ctx, config, filepath, req.Data, meta)
-	if err != nil {
-		fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
-		return err
-	}
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		_, err = transcribeAndUpload(ctx, config, req)
+		wg.Done()
+		if err != nil {
+			fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
+		}
+	}()
 
-	err = uploadToRdio(ctx, req.Filename, string(req.Meta), bytes.NewReader(req.Data))
-	if err != nil {
-		fmt.Println("[handleTranscriptionRequest] Error uploading to rdio: ", err.Error())
-		return err
-	}
+	go func() {
+		wg.Add(1)
+		err = uploadToRdio(ctx, req)
+		wg.Done()
+		if err != nil {
+			fmt.Println("[handleTranscriptionRequest] Error uploading to rdio: ", err.Error())
+		}
+	}()
+
+	wg.Wait()
 	return nil
 }
 
@@ -448,9 +441,13 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 }
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
-func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
+func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) (string, error) {
 
-	msg, segments, err := whisper(ctx, data)
+	key := req.FilePath()
+	data := req.Data
+	metadata := req.Meta
+
+	msg, segments, err := whisper(ctx, req.Data)
 
 	if err == nil {
 		fmt.Println(key+": ", msg)
@@ -514,74 +511,6 @@ func gemini(ctx context.Context, data []byte) (string, error) {
 
 	msg := strings.Join(transcriptionParts, "\n")
 	return msg, nil
-}
-
-// deepFilter runs an audio enhancement framework on the data based on the Deepfilter ai model
-func deepFilter(ctx context.Context, data []byte) ([]byte, error) {
-
-	dir := os.TempDir()
-	audioFile, err := os.CreateTemp(dir, "")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(audioFile.Name())
-
-	err = os.WriteFile(audioFile.Name(), data, 0666)
-	if err != nil {
-		return nil, err
-	}
-
-	cmd := exec.CommandContext(ctx, deepFilterCmd, "--pf", "-v", "-o", dir, audioFile.Name())
-	err = cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	return io.ReadAll(audioFile)
-}
-
-// whisper transcribes the audio with cloudflare Whisper
-func whisper(ctx context.Context, data []byte) (msg string, segments []string, err error) {
-	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
-
-	enc := base64.StdEncoding.EncodeToString(data)
-	payload, err := json.Marshal(CloudflareWhisperInput{
-		Audio:  enc,
-		Prompt: prompt,
-	})
-
-	if err != nil {
-		return "", nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", cloudflareWhisperUrl, bytes.NewReader(payload))
-	if err != nil {
-		return "", nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+cloudflareApiToken)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("Error calling cloudflare: %v\n", err)
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-	var output CloudflareWhisperOutput
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", nil, err
-	}
-	err = json.Unmarshal(body, &output)
-	if err != nil {
-		return "", nil, err
-	}
-
-	msg = output.Result.Text
-	//fmt.Println("Response from cloudflare: ", string(body))
-	for _, segment := range output.Result.Segments {
-		segments = append(segments, segment.Text)
-	}
-
-	return msg, segments, nil
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -672,14 +601,17 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 }
 
 // uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
-func uploadToRdio(ctx context.Context, filename, meta string, reader io.Reader) error {
+func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
+
+	filename, meta, reader := req.Filename, req.MetaRaw, bytes.NewReader(req.Data)
+
 	rdioScannerSecret := os.Getenv("RDIO_SCANNER_API_KEY")
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
 
 	writer.WriteField("key", rdioScannerSecret)
-	writer.WriteField("meta", meta)
+	writer.WriteField("meta", string(meta))
 	writer.WriteField("system", "1000") // "eastbay" system
 	part, _ := writer.CreateFormFile("audio", filename)
 
