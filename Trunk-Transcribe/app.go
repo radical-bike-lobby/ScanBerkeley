@@ -334,6 +334,8 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 	// fire goroutine and return to unblock client resources
 	go func() {
 
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		enhanced, enhanceErr := deepFilter(ctx, data)
 		if enhanceErr != nil {
 			log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
@@ -342,12 +344,12 @@ func handleTranscription(ctx context.Context, config *Config, r *http.Request) e
 		}
 
 		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
-		_, err := transcribeAndUpload(context.Background(), config, filepath, data, meta)
+		_, err := transcribeAndUpload(ctx, config, filepath, data, meta)
 		if err != nil {
 			fmt.Println("Error transcribing and uploading to slack: ", err.Error())
 		}
 
-		err = uploadToRdio(context.Background(), filename, string(callJson), bytes.NewReader(data))
+		err = uploadToRdio(ctx, filename, string(callJson), bytes.NewReader(data))
 		if err != nil {
 			fmt.Println("Error uploading to rdio-scanner: ", err.Error())
 		}
@@ -460,8 +462,6 @@ func deepFilter(ctx context.Context, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	cmd := exec.CommandContext(ctx, deepFilterCmd, "--pf", "-v", "-o", dir, audioFile.Name())
 	err = cmd.Run()
 	if err != nil {
