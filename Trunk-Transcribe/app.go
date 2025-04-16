@@ -57,7 +57,7 @@ const (
 )
 
 const (
-	deepFilterCmd = "deep-filter"
+	deepFilterCmd = "./deep-filter"
 )
 
 var (
