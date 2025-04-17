@@ -261,12 +261,7 @@ func main() {
 		for req := range ch {
 			wg.Add(1)
 			go func() {
-				log.Println("Handling transcription request: ", req.Filename)
-				err := handleTranscriptionRequest(context.Background(), config, req)
-				if err != nil {
-					log.Println("Error handling transcription request", err)
-				}
-				log.Println("Finished transcription request: ", req.Filename)
+				handleTranscriptionRequest(context.Background(), config, req)
 				wg.Done()
 			}()
 		}
@@ -391,17 +386,26 @@ func createTransciptionRequest(ctx context.Context, config *Config, r *http.Requ
 
 // handleTranscriptionRequest
 func handleTranscriptionRequest(ctx context.Context, config *Config, req *TranscriptionRequest) error {
+	var err error
+	start := time.Now()
+	log.Println("Handling transcription request: ", req.Filename)
+
+	defer func() {
+		duration := time.Now().Sub(start)
+		if err != nil {
+			log.Printf("Failed transcription request [%v]: %s : %v", duration, req.Filename, err)
+		} else {
+			log.Printf("Finished transcription request [%v]: %s", duration, req.Filename)
+		}
+	}()
 
 	var meta Metadata
-	err := json.Unmarshal(req.Meta, &meta)
+	err = json.Unmarshal(req.Meta, &meta)
 	if err != nil {
 		return err
 	}
 
-	enhanceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	enhanced, enhanceErr := deepFilter(enhanceCtx, req.Data)
+	enhanced, enhanceErr := deepFilter(ctx, req.Data)
 	if enhanceErr != nil {
 		log.Println("[handleTranscriptionRequest] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
 	} else {
