@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -258,11 +259,17 @@ func main() {
 
 	// start transcription request goroutine pool
 	go func() {
+
 		for req := range ch {
+			var requestsInFlight atomic.Int64
 			wg.Add(1)
+			requestsInFlight.Add(1)
+			fmt.Println("Requests in flight: ", requestsInFlight.Load())
 			go func() {
-				handleTranscriptionRequest(context.Background(), config, req)
+				ctx := context.Background()
+				handleTranscriptionRequest(ctx, config, req)
 				wg.Done()
+				requestsInFlight.Add(-1)
 			}()
 		}
 	}()
@@ -393,7 +400,7 @@ func handleTranscriptionRequest(ctx context.Context, config *Config, req *Transc
 	defer func() {
 		duration := time.Now().Sub(start)
 		if err != nil {
-			log.Printf("Failed transcription request [%v]: %s : %v", duration, req.Filename, err)
+			log.Printf("Faileds transcription request [%v]: %s : %v", duration, req.Filename, err)
 		} else {
 			log.Printf("Finished transcription request [%v]: %s", duration, req.Filename)
 		}
@@ -405,25 +412,38 @@ func handleTranscriptionRequest(ctx context.Context, config *Config, req *Transc
 		return err
 	}
 
-	enhanced, enhanceErr := deepFilter(ctx, req.Data)
+	enhanceCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	enhanced, enhanceErr := deepFilter(enhanceCtx, req.Data)
+
 	if enhanceErr != nil {
 		log.Println("[handleTranscriptionRequest] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
 	} else {
 		req.Data = enhanced
 	}
 
-	filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, req.Filename)
-	_, err = transcribeAndUpload(ctx, config, filepath, req.Data, meta)
-	if err != nil {
-		fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
-		return err
-	}
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, req.Filename)
+		_, err = transcribeAndUpload(ctx, config, filepath, req.Data, meta)
+		wg.Done()
+		if err != nil {
+			fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
+		}
+	}()
 
-	err = uploadToRdio(ctx, req.Filename, string(req.Meta), bytes.NewReader(req.Data))
-	if err != nil {
-		fmt.Println("[handleTranscriptionRequest] Error uploading to rdio: ", err.Error())
-		return err
-	}
+	go func() {
+		wg.Add(1)
+		err = uploadToRdio(ctx, req.Filename, string(req.Meta), bytes.NewReader(req.Data))
+		wg.Done()
+		if err != nil {
+			fmt.Println("[handleTranscriptionRequest] Error uploading to rdio: ", err.Error())
+		}
+	}()
+
+	wg.Wait()
 	return nil
 }
 
