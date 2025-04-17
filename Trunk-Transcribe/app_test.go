@@ -50,7 +50,8 @@ func TestUnmarshalMetadata(t *testing.T) {
 }
 
 func TestAudioPlayer(t *testing.T) {
-    mux := NewMux(nil)
+
+    mux := mux(nil, nil)
 
     rr := httptest.NewRecorder()
     req, err := http.NewRequest("GET", "/audio?link="+filename, nil)
@@ -169,7 +170,7 @@ func TestMentions(t *testing.T) {
             name:     "hyphen",
             sentance: "Can you mark a 10-15 time? Copy, 16-05",
             expect:   []string{"<@U06H9NA2L4V>"},
-        },        
+        },
     }
 
     for _, test := range tests {
@@ -177,7 +178,7 @@ func TestMentions(t *testing.T) {
             meta := ExtractSlackMeta(Metadata{AudioText: test.sentance}, BERKELEY, notifsMap)
             for _, elem := range test.expect {
                 assert.Contains(t, meta.Mentions, elem)
-            }            
+            }
         })
     }
 }
