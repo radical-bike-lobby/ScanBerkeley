@@ -17,11 +17,14 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -68,7 +71,7 @@ var (
 	versusRegex  = regexp.MustCompile(modeString + `.+(vs|versus|verses)(\.)?.+` + modeString)
 	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "King", "LeConte", "LeRoy", "Hilgard", "Mabel", "Marin", "Martin", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "San Pablo", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
-	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", "ring on three", "code 4", "code 34", "en route", "case number", "berry brothers", "rita run", "DBF", "Flock camera", "10-four", "10-4", "10 four", "His Lordships", "Cesar Chavez Park", "10-9 your traffic", "copy", "tow", "kill the beeper"}
+	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", "ring on three", "code 2", "code 3", "code 4", "code 34", "en route", "case number", "berry brothers", "rita run", "DBF", "Flock camera", "10-four", "10-4", "10 four", "His Lordships", "Cesar Chavez Park", "10-9 your traffic", "copy", "tow", "kill the beeper"}
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
 
@@ -250,14 +253,64 @@ func main() {
 		webhookUrlUCPD: webhookUrlUCPD,
 	}
 
-	mux := NewMux(config)
+	ch := make(chan *TranscriptionRequest)
+	var wg sync.WaitGroup
 
-	log.Println("listening on", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	// start transcription request goroutine pool
+	go func() {
+		for req := range ch {
+			wg.Add(1)
+			go func() {
+				log.Println("Handling transcription request: ", req.Filename)
+				err := handleTranscriptionRequest(context.Background(), config, req)
+				if err != nil {
+					log.Println("Error handling transcription request", err)
+				}
+				log.Println("Finished transcription request: ", req.Filename)
+				wg.Done()
+			}()
+		}
+	}()
+
+	// create server to serve http requests
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: mux(config, ch),
+	}
+
+	log.Println("Starting server on port: ", port)
+
+	// start server
+	go func() {
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+		log.Println("Stopped serving new connections.")
+	}()
+
+	// handle sigint
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownRelease()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+
+	// close TranscriptionRequest channel
+	close(ch)
+
+	// wait for transcription request go routines to complete
+	wg.Wait()
+
+	log.Println("Graceful shutdown complete.")
 }
 
-// NewMux creates a new ServeMux router
-func NewMux(config *Config) *http.ServeMux {
+// mux creates a new ServeMux router
+func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -287,76 +340,86 @@ func NewMux(config *Config) *http.ServeMux {
 
 	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 20<<20+512)
-		err := handleTranscription(r.Context(), config, r)
+		req, err := createTransciptionRequest(r.Context(), config, r)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
+		ch <- req
+
 		http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
 	})
 
 	return mux
 }
 
-func handleTranscription(ctx context.Context, config *Config, r *http.Request) error {
+// createTransciptionRequest creates a TranscriptionRequest object from the incoming http request
+func createTransciptionRequest(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
 
 	err := r.ParseMultipartForm(1 << 20)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	js, _, err := r.FormFile("call_json")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer js.Close()
 	callJson, _ := ioutil.ReadAll(js)
 
 	file, header, err := r.FormFile("call_audio")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
 	filename := filepath.Base(header.Filename)
 	data, _ := ioutil.ReadAll(file)
 
+	// if dedupeDispatch(meta) {
+	// 	log.Printf("Ignoring duplicate dispatch: %d, \n%s\n", meta.Talkgroup, meta.AudioText)
+	// 	return nil, nil
+	// }
+
+	req := &TranscriptionRequest{
+		Filename: filename,
+		Data:     data,
+		Meta:     callJson,
+	}
+	return req, nil
+}
+
+// handleTranscriptionRequest
+func handleTranscriptionRequest(ctx context.Context, config *Config, req *TranscriptionRequest) error {
+
 	var meta Metadata
-	err = json.Unmarshal(callJson, &meta)
+	err := json.Unmarshal(req.Meta, &meta)
 	if err != nil {
 		return err
 	}
 
-	if dedupeDispatch(meta) {
-		log.Printf("Ignoring duplicate dispatch: %d, \n%s\n", meta.Talkgroup, meta.AudioText)
-		return nil
+	enhanceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	enhanced, enhanceErr := deepFilter(enhanceCtx, req.Data)
+	if enhanceErr != nil {
+		log.Println("[handleTranscriptionRequest] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
+	} else {
+		req.Data = enhanced
 	}
 
-	// fire goroutine and return to unblock client resources
-	go func() {
+	filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, req.Filename)
+	_, err = transcribeAndUpload(ctx, config, filepath, req.Data, meta)
+	if err != nil {
+		fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
+		return err
+	}
 
-		ctx := context.Background()
-		enhanceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		enhanced, enhanceErr := deepFilter(enhanceCtx, data)
-		if enhanceErr != nil {
-			log.Println("[transcribeAndUpload] Error performing enhancement on audio. Falling back to original. ", enhanceErr)
-		} else {
-			data = enhanced
-		}
-
-		filepath := fmt.Sprintf("%s/%d/%s", meta.ShortName, meta.Talkgroup, filename)
-		_, err := transcribeAndUpload(ctx, config, filepath, data, meta)
-		if err != nil {
-			fmt.Println("Error transcribing and uploading to slack: ", err.Error())
-		}
-
-		err = uploadToRdio(ctx, filename, string(callJson), bytes.NewReader(data))
-		if err != nil {
-			fmt.Println("Error uploading to rdio-scanner: ", err.Error())
-		}
-
-	}()
-
+	err = uploadToRdio(ctx, req.Filename, string(req.Meta), bytes.NewReader(req.Data))
+	if err != nil {
+		fmt.Println("[handleTranscriptionRequest] Error uploading to rdio: ", err.Error())
+		return err
+	}
 	return nil
 }
 
@@ -383,7 +446,7 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, key string, data []byte, metadata Metadata) (string, error) {
 
-	msg, err := whisper(ctx, data)
+	msg, segments, err := whisper(ctx, data)
 
 	if err == nil {
 		fmt.Println(key+": ", msg)
@@ -392,6 +455,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, key string, data [
 	}
 
 	metadata.AudioText = msg
+	metadata.Segments = segments
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
@@ -473,7 +537,7 @@ func deepFilter(ctx context.Context, data []byte) ([]byte, error) {
 }
 
 // whisper transcribes the audio with cloudflare Whisper
-func whisper(ctx context.Context, data []byte) (string, error) {
+func whisper(ctx context.Context, data []byte) (msg string, segments []string, err error) {
 	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
 
 	enc := base64.StdEncoding.EncodeToString(data)
@@ -483,31 +547,37 @@ func whisper(ctx context.Context, data []byte) (string, error) {
 	})
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", cloudflareWhisperUrl, bytes.NewReader(payload))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+cloudflareApiToken)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("Error calling cloudflare: %v\n", err)
-		return "", err
+		return "", nil, err
 	}
 	defer resp.Body.Close()
 	var output CloudflareWhisperOutput
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	err = json.Unmarshal(body, &output)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	fmt.Println("Response from cloudflare: ", string(body))
-	return output.Result.Text, nil
+
+	msg = output.Result.Text
+	//fmt.Println("Response from cloudflare: ", string(body))
+	for _, segment := range output.Result.Segments {
+		segments = append(segments, segment.Text)
+	}
+
+	return msg, segments, nil
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -527,7 +597,6 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 		ContentType: aws.String("application/octet-stream"), // content type
 	}
 	_, err := uploader.UploadWithContext(ctx, input)
-	fmt.Println("done uploading")
 	return err
 }
 
@@ -542,7 +611,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		meta.AudioText = "Could not transcribe audio"
 	}
 
-	blocks := strings.Split(meta.AudioText, ". ")
+	blocks := meta.Segments
 
 	for i, block := range blocks {
 		if i >= len(meta.SrcList) {
@@ -556,7 +625,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		if tag == "" {
 			tag = strconv.FormatInt(src.Src, 10)
 		}
-		block = strings.TrimSpace(block) + "."
+		block = strings.TrimSpace(block)
 		blocks[i] = tag + ": " + block
 	}
 
@@ -582,7 +651,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 
 	// upload audio
 	filename := filepath.Base(key)
-	summary, err := config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+	_, err := config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
 		Filename:       filename,
 		FileSize:       len(data),
 		Reader:         reader,
@@ -591,9 +660,9 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	})
 	if err != nil {
 		log.Println("Error uploading file to slack: ", err)
-	} else {
+	} /*else {
 		log.Printf("Uploaded file: %s with title: %s to channel: %v", summary.ID, summary.Title, channelID)
-	}
+	}*/
 
 	return err
 }
