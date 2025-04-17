@@ -93,6 +93,7 @@ type Metadata struct {
 	URL               string      `json:"url,omitempty"`
 	SrcList           []Source    `json:"srcList,omitempty"`
 	FreqList          []Frequency `json:"freqList,omitempty"`
+	Segments          []string    `json:"segments,omitempty"`
 }
 
 type Notifs struct {
@@ -136,11 +137,21 @@ func (addr Address) String() string {
 	}
 }
 
+type Segment struct {
+	Start             float32 `json:"start,omitempty"`
+	End               float32 `json:"end,omitempty"`
+	Text              string  `json:"text,omitempty"`
+	AvgLogProb        float64 `json:"avg_logprob,omitempty"`
+	NoSpeechProb      float64 `json:"no_speech_prob,omitempty"`
+	CompressionRation float64 `json:"compression_ratio,omitempty"`
+}
+
 type TranscriptionInfo struct {
-	Language  string `json:"language,omitempty"`
-	Duration  string `json:"duration,omitempty"`
-	Text      string `json:"text,omitempty"`
-	WordCount int    `json:"word_count,omitempty"`
+	Language  string    `json:"language,omitempty"`
+	Duration  string    `json:"duration,omitempty"`
+	Text      string    `json:"text,omitempty"`
+	WordCount int       `json:"word_count,omitempty"`
+	Segments  []Segment `json:"segments,omitempty"`
 }
 
 type CloudflareWhisperInput struct {
@@ -152,6 +163,12 @@ type CloudflareWhisperInput struct {
 type CloudflareWhisperOutput struct {
 	Result   TranscriptionInfo `json:"result,omitempty"`
 	Success  bool              `json:"success,omitempty"`
-	Errors   interface{}          `json:"errors,omitempty"`
+	Errors   interface{}       `json:"errors,omitempty"`
 	Messages []string          `json:"messages,omitempty"`
+}
+
+type TranscriptionRequest struct {
+	Filename string
+	Data     []byte
+	Meta     []byte
 }
