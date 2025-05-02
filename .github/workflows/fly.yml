@@ -23,6 +23,8 @@ jobs:
         run: go build -v ./...
       - name: Test with the Go CLI
         run: go test
+      - name: Install ffmpeg
+        run: sudo apt install -y ffmpeg
         
   deploy:
     name: Deploy app
