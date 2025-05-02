@@ -29,11 +29,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/generative-ai-go/genai"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/slack-go/slack"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/api/option"
 )
 
 type SlackChannelID string
@@ -175,9 +173,6 @@ var notifsMap = map[SlackUserID]Notifs{
 
 var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
 var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
-
-// google gemini
-var geminiApiKey string = os.Getenv("GEMINI_API_KEY")
 
 // slack setup
 var webhookUrl string = os.Getenv("SLACK_WEBHOOK_URL")
@@ -471,46 +466,6 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	})
 	err = wg.Wait()
 	return msg, err
-}
-
-func gemini(ctx context.Context, data []byte) (string, error) {
-
-	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiApiKey))
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
-
-	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
-	parts := []genai.Part{
-		genai.Blob{MIMEType: "audio/mp3", Data: data},
-		genai.Text("Please transcribe the audio. "),
-		genai.Text("Ignore silences."),
-		genai.Text("Here are some correction terms: " + prompt),
-	}
-
-	model := client.GenerativeModel("gemini-1.5-pro")
-	resp, err := model.GenerateContent(ctx, parts...)
-	if err != nil {
-		return "", err
-	}
-
-	var transcriptionParts []string
-	for _, c := range resp.Candidates {
-		if c.Content == nil {
-			continue
-		}
-		for _, part := range c.Content.Parts {
-			line := fmt.Sprintf("%v", part)
-			if strings.TrimSpace(line) == "" {
-				continue
-			}
-			transcriptionParts = append(transcriptionParts, line)
-		}
-	}
-
-	msg := strings.Join(transcriptionParts, "\n")
-	return msg, nil
 }
 
 // transcribeAndUpload uploads the audio to S3

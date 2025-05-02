@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/generative-ai-go/genai"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -21,6 +23,9 @@ const (
 	silenceThreshold   = 100                    // Adjust as needed
 	minSilenceDuration = 200 * time.Millisecond // Minimum duration of silence to remove
 )
+
+// google gemini
+var geminiApiKey string = os.Getenv("GEMINI_API_KEY")
 
 // cloudflare setup
 var cloudflareApiToken string = os.Getenv("CLOUDFLARE_API_TOKEN")
@@ -71,6 +76,46 @@ func whisper(ctx context.Context, data []byte) (msg string, segments []string, e
 	}
 
 	return msg, segments, nil
+}
+
+func gemini(ctx context.Context, data []byte) (string, error) {
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiApiKey))
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	prompt := strings.Join(append(streets, append(modifiers, terms...)...), ", ")
+	parts := []genai.Part{
+		genai.Blob{MIMEType: "audio/mp3", Data: data},
+		genai.Text("Please transcribe the audio. "),
+		genai.Text("Ignore silences."),
+		genai.Text("Here are some correction terms: " + prompt),
+	}
+
+	model := client.GenerativeModel("gemini-1.5-pro")
+	resp, err := model.GenerateContent(ctx, parts...)
+	if err != nil {
+		return "", err
+	}
+
+	var transcriptionParts []string
+	for _, c := range resp.Candidates {
+		if c.Content == nil {
+			continue
+		}
+		for _, part := range c.Content.Parts {
+			line := fmt.Sprintf("%v", part)
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			transcriptionParts = append(transcriptionParts, line)
+		}
+	}
+
+	msg := strings.Join(transcriptionParts, "\n")
+	return msg, nil
 }
 
 // deepFilter runs an audio enhancement framework on the data based on the Deepfilter ai model
