@@ -173,6 +173,7 @@ var notifsMap = map[SlackUserID]Notifs{
 
 var r2Key string = os.Getenv("CLOUDFLARE_R2_KEY")
 var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
+var r2Path string = "https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev"
 
 // slack setup
 var webhookUrl string = os.Getenv("SLACK_WEBHOOK_URL")
@@ -313,7 +314,7 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 			return
 		}
 
-		result, err := url.JoinPath("https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev", link[0])
+		result, err := url.JoinPath(r2Path, link[0])
 		if err != nil {
 			writeErr(w, err)
 			return
