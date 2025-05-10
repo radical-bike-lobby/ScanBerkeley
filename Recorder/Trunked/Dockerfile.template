@@ -9,10 +9,9 @@ COPY berkeley_talkgroups.csv berkeley_talkgroups.csv
 COPY albany_talkgroups.csv albany_talkgroups.csv
 COPY emeryville_talkgroups.csv emeryville_talkgroups.csv
 COPY oakland_talkgroups.csv oakland_talkgroups.csv
-COPY transcribe.sh transcribe.sh
+COPY ../transcribe.sh transcribe.sh
 RUN chmod +x transcribe.sh
 
 RUN apt-get update
 RUN apt-get install -y jq
 RUN apt-get install -y vim
-RUN apt-get install -y ffmpeg

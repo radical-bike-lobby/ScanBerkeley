@@ -1,0 +1,56 @@
+{
+  "ver": 2,
+  "controlRetuneLimit": 5,
+  "sources": [
+    {
+      "center": 769965625,
+      "rate": 2040000,
+      "error": 1395,
+      "gain": 40,
+      "digitalRecorders": 12,
+      "driver": "osmosdr",
+      "device": "rtl=0"
+    },
+    {
+      "center": 772094650,
+      "rate": 2040000,
+      "error": 1395,
+      "gain": 40,
+      "digitalRecorders": 12,
+      "driver": "osmosdr",
+      "device": "rtl=1"
+    },
+    {
+      "center": 773978125,
+      "rate": 1800000,
+      "error": 1395,
+      "gain": 40,
+      "digitalRecorders": 0,
+      "driver": "osmosdr",
+      "device": "rtl=2"
+    }
+  ],
+  "systems": [
+    {
+      "control_channels": [
+        773468750,
+        773743750,
+        774218750,
+        774493750
+      ],
+      "type": "conventional",
+      "shortName": "Berkeley",
+      "talkgroupsFile": "berkeley_talkgroups.csv",
+      "unitTagsFile": "UnitTags.csv",
+      "recordUnknown": false,
+      "hideUnknownTalkgroups": true,
+      "squelch": -50,
+      "modulation": "qpsk",
+      "logLevel": "debug",
+      "audioArchive": true,
+      "callLog": true,
+      "uploadScript": "/app/transcribe.sh",
+      "enabled": true
+    },
+  ]
+}
