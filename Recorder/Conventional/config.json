@@ -3,7 +3,7 @@
   "controlRetuneLimit": 5,
   "sources": [
     {
-      "center": 769965625,
+      "center": 156165000,
       "rate": 2040000,
       "error": 1395,
       "gain": 40,
@@ -12,35 +12,21 @@
       "device": "rtl=0"
     },
     {
-      "center": 772094650,
+      "center": 453525000,
       "rate": 2040000,
       "error": 1395,
       "gain": 40,
       "digitalRecorders": 12,
       "driver": "osmosdr",
       "device": "rtl=1"
-    },
-    {
-      "center": 773978125,
-      "rate": 1800000,
-      "error": 1395,
-      "gain": 40,
-      "digitalRecorders": 0,
-      "driver": "osmosdr",
-      "device": "rtl=2"
     }
   ],
   "systems": [
     {
-      "control_channels": [
-        773468750,
-        773743750,
-        774218750,
-        774493750
-      ],
-      "type": "conventional",
-      "shortName": "Berkeley",
-      "talkgroupsFile": "berkeley_talkgroups.csv",
+      "shortName": "Berk-Cnv",
+      "type": "conventionalP25", 
+      "channels": [156165000, 453525000, 4533375000],
+      "channelFile": "berkeley_channels.csv",
       "unitTagsFile": "UnitTags.csv",
       "recordUnknown": false,
       "hideUnknownTalkgroups": true,
@@ -51,6 +37,6 @@
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
-    },
+    }
   ]
 }
