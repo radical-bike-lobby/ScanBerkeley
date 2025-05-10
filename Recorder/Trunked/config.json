@@ -47,8 +47,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": true,
-      "callLog": true,
+      "audioArchive": false,
+      "callLog": false,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -68,8 +68,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": true,
-      "callLog": true,
+      "audioArchive": false,
+      "callLog": false,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -89,8 +89,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": true,
-      "callLog": true,
+      "audioArchive": false,
+      "callLog": false,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -103,17 +103,17 @@
       ],
       "type": "p25",
       "shortName": "Oakland",
-      "talkgroupsFile": "oakland_talkgroups.csv",
+      "talkgroupsFile": "oakland_hospitals_talkgroups.csv",
       "unitTagsFile": "UnitTags.csv",
       "recordUnknown": false,
       "hideUnknownTalkgroups": true,
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": true,
-      "callLog": true,
+      "audioArchive": false,
+      "callLog": false,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": false
+      "enabled": true
     }
   ]
 }

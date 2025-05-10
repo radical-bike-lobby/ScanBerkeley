@@ -1,0 +1,41 @@
+{
+  "ver": 2,
+  "controlRetuneLimit": 5,
+  "sources": [
+    {
+      "center": 156165000,
+      "rate": 2040000,
+      "error": 1395,
+      "gain": 40,
+      "digitalRecorders": 12,
+      "driver": "osmosdr",
+      "device": "rtl=0"
+    },
+    {
+      "center": 453525000,
+      "rate": 2040000,
+      "error": 1395,
+      "gain": 40,
+      "digitalRecorders": 12,
+      "driver": "osmosdr",
+      "device": "rtl=1"
+    }
+  ],
+  "systems": [
+    {
+      "shortName": "Berk-Cnv",
+      "type": "conventional",      
+      "channelFile": "berkeley_channels.csv",
+      "unitTagsFile": "UnitTags.csv",
+      "recordUnknown": false,
+      "hideUnknownTalkgroups": false,
+      "squelch": -50,
+      "modulation": "qpsk",
+      "logLevel": "debug",
+      "audioArchive": false,
+      "callLog": false,
+      "uploadScript": "/app/transcribe.sh",
+      "enabled": true
+    }
+  ]
+}
