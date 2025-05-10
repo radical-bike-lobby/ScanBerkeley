@@ -47,8 +47,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": false,
-      "callLog": false,
+      "audioArchive": true,
+      "callLog": true,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -68,8 +68,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": false,
-      "callLog": false,
+      "audioArchive": true,
+      "callLog": true,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -89,8 +89,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": false,
-      "callLog": false,
+      "audioArchive": true,
+      "callLog": true,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     },
@@ -110,8 +110,8 @@
       "squelch": -50,
       "modulation": "qpsk",
       "logLevel": "debug",
-      "audioArchive": false,
-      "callLog": false,
+      "audioArchive": true,
+      "callLog": true,
       "uploadScript": "/app/transcribe.sh",
       "enabled": true
     }
