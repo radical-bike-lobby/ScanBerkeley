@@ -1,0 +1,36 @@
+name: Trunk Recorder Deploy
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - Recorder/Trunked/**
+
+jobs:
+  trunk_recorder_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: balena-io/deploy-to-balena-action@master
+        id: build
+        with:
+          balena_token: ${{ secrets.BALENA_TOKEN }}
+          fleet: g_naveen_gattu/scanner-eastbay
+          source: Recorder/Trunked
+      - name: Log release ID built
+        working-directory: ./Recorder/Trunked
+        run: echo "Built release ID ${{ steps.build.outputs.release_id }}"
+  conventional_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: balena-io/deploy-to-balena-action@master
+        id: build
+        with:
+          balena_token: ${{ secrets.BALENA_TOKEN }}
+          fleet: g_naveen_gattu/scanner-eastbay-conventional
+          source: Recorder/Conventional
+      - name: Log release ID built
+        working-directory: ./Recorder/Conventional
+        run: echo "Built release ID ${{ steps.build.outputs.release_id }}"

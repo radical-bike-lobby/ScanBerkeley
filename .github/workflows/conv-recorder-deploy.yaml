@@ -1,14 +1,14 @@
-name: Balena Deploy
+name: Conventional Recorder Deploy
 on:
   push:
     branches:
       - main
       - master
     paths:
-      - Trunk-Recorder/**
+      - Recorder/Conventional/**
 
 jobs:
-  trunked_deploy:
+  conventional_recorder_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -16,10 +16,10 @@ jobs:
         id: build
         with:
           balena_token: ${{ secrets.BALENA_TOKEN }}
-          fleet: g_naveen_gattu/scanner-eastbay
-          source: Recorder/Trunked
+          fleet: g_naveen_gattu/scanner-eastbay-conventional
+          source: Recorder/Conventional
       - name: Log release ID built
-        working-directory: ./Recorder/Trunked
+        working-directory: ./Recorder/Conventional
         run: echo "Built release ID ${{ steps.build.outputs.release_id }}"
   conventional_deploy:
     runs-on: ubuntu-latest
