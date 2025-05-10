@@ -3,6 +3,7 @@ FROM robotastic/trunk-recorder:5.0.2
 ENV UDEV=on
 
 COPY config.json config.json
+COPY UnitTags.csv UnitTags.csv
 COPY berkeley_channels.csv berkeley_channels.csv
 COPY transcribe.sh transcribe.sh
 RUN chmod +x transcribe.sh

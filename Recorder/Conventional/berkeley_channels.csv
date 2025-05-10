@@ -1,4 +1,4 @@
 TG Number,Frequency,Tone,Alpha Tag,Description,Tag,Category,Enable,Signal Detector,Squelch
-0,156165000,162.2,Berkeley SD,Street Department,Streets,Streets,,,
-1,453525000,162.2,Berkeley PW1,Berkeley Public Works,Public Works,Public Works,,,
-2,4533375000,162.2,Berkeley PW2,Berkeley Public Works Tactical,Public Works,Public Works,,,
+0,156165000,162.2,Berkeley SD,Street Department,Streets,Streets,true,false,
+1,453525000,162.2,Berkeley PW1,Berkeley Public Works,Public Works,Public Works,true,false,
+2,453337500,162.2,Berkeley PW2,Berkeley Public Works Tactical,Public Works,Public Works,true,false,
