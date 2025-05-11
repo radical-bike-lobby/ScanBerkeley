@@ -131,6 +131,7 @@ var (
 		4423: OAKLAND,
 		5507: OAKLAND,
 		5509: OAKLAND,
+  5512: OAKLAND,
 	}
 
 	location *time.Location
