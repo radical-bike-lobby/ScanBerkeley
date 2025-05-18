@@ -129,8 +129,9 @@ var (
 		4421: OAKLAND,
 		4422: OAKLAND,
 		4423: OAKLAND,
-		5507: OAKLAND,
-		5509: OAKLAND,
+		5507: OAKLAND, // Childrens Hospital
+		5509: OAKLAND, // Highland Hospital
+		5516: OAKLAND, // Summit Hospital
   5512: OAKLAND,
 	}
 
