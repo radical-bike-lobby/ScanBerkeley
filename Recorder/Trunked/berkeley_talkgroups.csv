@@ -1,21 +1,37 @@
 Decimal,Hex,Mode,Alpha Tag,Description,Tag,Category,Priority
-2105,839,D,BER DSP1,Fire Dispatch 1,Fire Dispatch,Berkeley,1
-2106,83a,D,BER DSP2,Fire Dispatch 2,Fire Dispatch,Berkeley,1
-2107,83b,D,BER DSP3,Fire Dispatch 3,Fire Dispatch,Berkeley,1
-2112,840,D,BER EMRG,Fire Emergency,Emergency Ops,Berkeley,1
-2671,a6f,D,BER CMD11,Fire Command 11,Fire-Tac,Alameda County Fire,1
-2672,a70,D,BER CMD12,Fire Command 12,Fire-Tac,Alameda County Fire,1
-2691,a83,D,BER TAC31,Fire Tac 31,Fire-Tac,Alameda County Fire,1
-2692,a84,D,BER TAC32,Fire Tac 32,Fire-Tac,Alameda County Fire,1
-2711,a97,D,BER TAC51,Fire Tac 51,Fire-Tac,Alameda County Fire,1
-2712,a98,D,BER TAC52,Fire Tac 52,Fire-Tac,Alameda County Fire,1
-3105,c21,T,BPD 1,Police Dispatch,Law Dispatch,Berkeley,1
-3106,c22,T,BPD 2,Police Ch 2,Law Tac,Berkeley,1
-3108,c24,T,BPD TAC1,Police Tactical 1,Law Tac,Berkeley,1
-3110,c26,T,BPD INV1,Police Investigations 1,Law Tac,Berkeley,1
-3112,c26,T,BPD PRKG,Police Parking Enforcement,Law Talk,Berkeley,1
+2100,834,D,Berkeley FD ANNC,Fire Dispatch Announce,Berkeley,1
+2105,839,D,Berkeley FD1,Fire Dispatch 1,Fire Dispatch,Berkeley,1
+2106,83a,D,Berkeley FD2,Fire Dispatch 2,Fire Dispatch,Berkeley,1
+2107,83b,D,Berkeley FD3 Disp,Automated Dispatch,Fire Dispatch,Berkeley,1
+2108,83c,D,Berkeley FD4,Fire Dispatch 4,Fire Dispatch,Berkeley,1
+2109,83d,D,Berkeley FD5,Fire Dispatch 5,Fire Dispatch,Berkeley,1
+2110,83e,D,Berkeley FD6,Fire Dispatch 6,Fire Dispatch,Berkeley,1
+2111,83f,D,Berkeley FD7,Fire Dispatch 7,Fire Dispatch,Berkeley,1
+2112,840,D,Berkeley FD EMRG,Fire Dispatch Emergency,Fire Dispatch,Berkeley,1
+2671,a6f,D,ACFD Command 11,Command 11 - Berkeley,Fire-Tac,Alameda County Fire,1
+2672,a70,D,ACFD Command 12,Command 12 - Berkeley,Fire-Tac,Alameda County Fire,1
+2691,a83,D,ACFD Tac 31,Tac 31 - Berkeley,Fire-Tac,Alameda County Fire,1
+2692,a84,D,ACFD Tac 32,Tac 32 - Berkeley,Fire-Tac,Alameda County Fire,1
+2711,a97,D,ACFD Tac 51,Tac 51 - Berkeley,Fire-Tac,Alameda County Fire,1
+2712,a98,D,ACFD Tac 52,Tac 52 - Berkeley,Fire-Tac,Alameda County Fire,1
+3100,c1c,D,Berkeley PD ANNC,Police Dispatch Announce,Law Dispatch,Berkeley,1
+3105,c21,T,Berkeley PD1,Police Dispatch,Law Dispatch,Berkeley,1
+3106,c22,T,Berkeley PD2,Police Ch 2,Law Tac,Berkeley,1
+3108,c24,T,Berkeley PD4,Police Ch 4,Law Tac,Berkeley,1
+3110,c26,T,Berkeley PD6,Police Investigations 1,Law Tac,Berkeley,1
+3112,c28,T,Berkeley PD PRKG,Parking Enforcement,Law Dispatch,Berkeley,1
 3605,e15,T,UCB PD1 DSP,Police Dispatch,Law Dispatch,UC Berkeley,1
 3606,e16,D,UCB PD2,Police Ch 2,Law Tac,UC Berkeley,1
 3608,e18,D,UCB PD4 ENF,Police Enforcement,Law Tac,UC Berkeley,1
 3609,e19,D,UCB PD5,POLICE TAC,Law Tac,UC Berkeley,1
+4100,1004,Berkeley PW ANNC,Berkeley Public Works Announce,Public Works,Berkeley,1
+4105,1009,Berkeley PW1,Berkeley Public Works Ch 1,Public Works,Berkeley,1
+4106,100A,Berkeley PW2,Berkeley Public Works Ch 2,Public Works,Berkeley,1
+4107,100B,Berkeley PW3,Berkeley Public Works Ch 3,Public Works,Berkeley,1
+4108,100C,Berkeley PW4,Berkeley Public Works Ch 4,Public Works,Berkeley,1
+4109,100D,Berkeley PW5,Berkeley Public Works Ch 5,Public Works,Berkeley,1
+4110,100F,Berkeley PW6,Berkeley Public Works Ch 6,Public Works,Berkeley,1
+4111,100F,Berkeley PW7,Berkeley Public Works Ch 7,Public Works,Berkeley,1
+4112,1010,Berkeley PW8,Berkeley Public Works Ch 8,Public Works,Berkeley,1
 5506,1582,D,Alta Bates MC,Alta Bates Medical Center - Berkeley,Hospital,Hopital,1
+
