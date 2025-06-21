@@ -144,7 +144,7 @@ func (n Notifs) MatchesText(channelID SlackChannelID, talkgroupID TalkGroupID, t
 	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
 
 	switch {
-	case !listeningToChannel && listeningToTalkgroup: // user not listening to channel or talkgroup
+	case !listeningToChannel && !listeningToTalkgroup: // user not listening to channel or talkgroup
 		return false
 	case n.NotRegex != nil && n.NotRegex.MatchString(text): // notregex matches text. skip
 		return false
