@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -455,37 +454,18 @@ func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
 // It accepts a sentace to match keywords against. The keywords map provides a map
 // of mentions to keywords to match.
 
-func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[SlackUserID]Notifs) (slackMeta SlackMeta) {
+func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[SlackUserID][]Notifs) (slackMeta SlackMeta) {
 
 	text := strings.ToLower(meta.AudioText)
 	words := wordsRegex.FindAllString(text, -1) //split text into words array
 
-	talkgroup := meta.Talkgroup
+	talkgroupID := TalkGroupID(meta.Talkgroup)
 
 	for userID, notifs := range notifsMap {
-		listeningToChannel := slices.Contains(notifs.Channels, channelID)
-		listeningToTalkgroup := slices.Contains(notifs.TalkGroups, TalkGroupID(talkgroup))
-
-		switch {
-		case !listeningToChannel && listeningToTalkgroup: // user not listening to channel or talkgroup
-			continue
-		case notifs.NotRegex != nil && notifs.NotRegex.MatchString(text): // notregex matches text. skip
-			continue
-		case notifs.Regex != nil && notifs.Regex.MatchString(text): // regex matches text. append
-			slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
-			continue
-		}
-
-		// check the included keywords
-	match:
-		for _, keyword := range notifs.Include {
-			keyword = strings.ToLower(keyword)
-			sequence := wordsRegex.FindAllString(keyword, -1)
-			for chunk := range slices.Chunk(words, len(sequence)) {
-				if slices.Equal(chunk, sequence) {
-					slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
-					break match
-				}
+		for _, notif := range notifs {
+			if notif.MatchesText(channelID, talkgroupID, text, words) {
+				slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
+				break
 			}
 		}
 	}

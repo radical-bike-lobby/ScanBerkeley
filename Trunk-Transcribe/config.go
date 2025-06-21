@@ -91,37 +91,43 @@ var (
 //slack user id to keywords map
 // supports regex
 
-var notifsMap = map[SlackUserID]Notifs{
-	EMILIE: Notifs{
-		Include:    []string{"auto ped", "auto-ped", "autoped", "autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "trauma activation", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", "flock", "spikes", "challenging", "beeper", "cage", "tom", "register", "1033 frank", "1033f", "1033", "10-33 frank", "pursuit", "frank"},
-		NotRegex:   regexp.MustCompile("no (weapon|gun)s?"),
-		Regex:      versusRegex,
-		Channels:   []SlackChannelID{BERKELEY, UCPD},
-		TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL, CHILDRENS_HOSPITAL},
+var notifsMap = map[SlackUserID][]Notifs{
+	EMILIE: []Notifs{
+		{
+			Include:    []string{"auto ped", "auto-ped", "autoped", "autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", "flock", "spikes", "challenging", "beeper", "cage", "tom", "register", "1033 frank", "1033f", "1033", "10-33 frank", "pursuit", "frank"},
+			NotRegex:   regexp.MustCompile("no (weapon|gun)s?"),
+			Regex:      versusRegex,
+			Channels:   []SlackChannelID{BERKELEY, UCPD},
+			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL, CHILDRENS_HOSPITAL},
+		},
+		{
+			Include:    []string{"trauma", "trauma activation"},
+			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL, CHILDRENS_HOSPITAL},
+		},
 	},
-	NAVEEN: Notifs{
+	NAVEEN: []Notifs{{
 		Include:  []string{"hit and run", "auto ped", "auto-ped", "autoped", "autobike", "auto bicycle", "auto-bike", "auto-bicycle", "Rose St", "Rose Street", "Ruth Acty", "King Middle"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD, ALBANY, EMERYVILLE},
-	},
-	MARC: Notifs{
+	}},
+	MARC: []Notifs{{
 		Include:  []string{"hit and run", "autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY, UCPD},
-	},
-	JOSE: Notifs{
+	}},
+	JOSE: []Notifs{{
 		Include:  []string{"accident", "collision", "crash", "crashed", "crashes"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{OAKLAND},
-	},
-	STEPHAN: Notifs{
+	}},
+	STEPHAN: []Notifs{{
 		Include:  []string{"GSW", "Active Shooter", "Shots Fired", "Pursuit", "Structure Fire", "Shooting", "Shooter", "Shots", "Code 33", "glock"},
 		NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 		Channels: []SlackChannelID{BERKELEY, UCPD},
-	},
-	HELEN: Notifs{
+	}},
+	HELEN: []Notifs{{
 		Include:  []string{"hit and run", "autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "marin", "hopkins", "el dorado"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY},
-	},
+	}},
 }

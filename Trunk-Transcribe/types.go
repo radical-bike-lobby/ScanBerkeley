@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
+	"strings"
 )
 
 type SlackChannelID string
@@ -135,6 +137,33 @@ type Notifs struct {
 	NotRegex   *regexp.Regexp
 	Channels   []SlackChannelID //the channels to listen on
 	TalkGroups []TalkGroupID    //individual talkgroups to listen to (could be exclusive of channels)
+}
+
+func (n Notifs) MatchesText(channelID SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
+	listeningToChannel := slices.Contains(n.Channels, channelID)
+	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
+
+	switch {
+	case !listeningToChannel && listeningToTalkgroup: // user not listening to channel or talkgroup
+		return false
+	case n.NotRegex != nil && n.NotRegex.MatchString(text): // notregex matches text. skip
+		return false
+	case n.Regex != nil && n.Regex.MatchString(text): // regex matches text. append
+		return true
+	}
+
+	// check the included keywords
+
+	for _, keyword := range n.Include {
+		keyword = strings.ToLower(keyword)
+		sequence := wordsRegex.FindAllString(keyword, -1)
+		for chunk := range slices.Chunk(words, len(sequence)) {
+			if slices.Equal(chunk, sequence) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type SlackMeta struct {
