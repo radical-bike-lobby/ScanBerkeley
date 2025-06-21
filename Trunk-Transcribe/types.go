@@ -4,6 +4,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
+	"strings"
+)
+
+type SlackChannelID string
+
+const (
+	UCPD       SlackChannelID = "C06J8T3EUP9"
+	BERKELEY   SlackChannelID = "C06A28PMXFZ"
+	OAKLAND                   = "C070R7LGVDY"
+	ALBANY                    = "C0713T4KMMX"
+	EMERYVILLE                = "C07123TKG3E"
+)
+
+type TalkGroupID int64
+
+const (
+	ALTA_BATES_HOSPITAL = 5506
+	CHILDRENS_HOSPITAL  = 5507
+	HIGHLAND_HOSPITAL   = 5509
+)
+
+type SlackUserID string
+
+const (
+	EMILIE  SlackUserID = "U06H9NA2L4V"
+	MARC                = "U03FTUS9SSD"
+	NAVEEN              = "U0531U1RY1W"
+	JOSE                = "U073Q372CP9"
+	STEPHAN             = "U06UWE5EDAT"
+	HELEN               = "U08155VNVRQ"
 )
 
 // Structures to parse json of the form:
@@ -101,10 +132,38 @@ type Metadata struct {
 }
 
 type Notifs struct {
-	Include  []string
-	Regex    *regexp.Regexp
-	NotRegex *regexp.Regexp
-	Channels []SlackChannelID //the channels to listen on
+	Include    []string
+	Regex      *regexp.Regexp
+	NotRegex   *regexp.Regexp
+	Channels   []SlackChannelID //the channels to listen on
+	TalkGroups []TalkGroupID    //individual talkgroups to listen to (could be exclusive of channels)
+}
+
+func (n Notifs) MatchesText(channelID SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
+	listeningToChannel := slices.Contains(n.Channels, channelID)
+	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
+
+	switch {
+	case !listeningToChannel && listeningToTalkgroup: // user not listening to channel or talkgroup
+		return false
+	case n.NotRegex != nil && n.NotRegex.MatchString(text): // notregex matches text. skip
+		return false
+	case n.Regex != nil && n.Regex.MatchString(text): // regex matches text. append
+		return true
+	}
+
+	// check the included keywords
+
+	for _, keyword := range n.Include {
+		keyword = strings.ToLower(keyword)
+		sequence := wordsRegex.FindAllString(keyword, -1)
+		for chunk := range slices.Chunk(words, len(sequence)) {
+			if slices.Equal(chunk, sequence) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type SlackMeta struct {
