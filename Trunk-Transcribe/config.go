@@ -98,7 +98,6 @@ var notifsMap = map[SlackUserID][]Notifs{
 			NotRegex:   regexp.MustCompile("no (weapon|gun)s?"),
 			Regex:      versusRegex,
 			Channels:   []SlackChannelID{BERKELEY, UCPD},
-			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL, CHILDRENS_HOSPITAL},
 		},
 		{
 			Include:    []string{"trauma", "trauma activation"},
