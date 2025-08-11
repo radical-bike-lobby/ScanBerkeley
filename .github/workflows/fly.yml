@@ -19,6 +19,8 @@ jobs:
           go-version: '1.21.x'
       - name: Install dependencies
         run: go get .
+      - name: Update apt package index
+        run: sudo apt-get update
       - name: Install ffmpeg
         run: sudo apt install -y ffmpeg
       - name: Build
