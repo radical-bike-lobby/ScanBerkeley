@@ -35,6 +35,7 @@ const (
 	JOSE                = "U073Q372CP9"
 	STEPHAN             = "U06UWE5EDAT"
 	HELEN               = "U08155VNVRQ"
+	TAJ                 = "U08V90KL9SS"
 )
 
 // Structures to parse json of the form:
