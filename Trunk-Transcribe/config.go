@@ -129,4 +129,9 @@ var notifsMap = map[SlackUserID][]Notifs{
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY},
 	}},
+ TAJ: []Notifs{{
+  Include: []string{"autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped"},
+  Regex: versusRegex,
+  Channels: []SlackChannelID{BERKELEY},
+ }},
 }
