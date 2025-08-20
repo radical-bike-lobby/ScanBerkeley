@@ -382,7 +382,8 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	// determine channel
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
 	if !ok {
-		channelID = defaultChannelID
+		log.Println("Could not determine channel for talkgroup : ", meta.Talkgroup)
+		return nil		
 	}
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
