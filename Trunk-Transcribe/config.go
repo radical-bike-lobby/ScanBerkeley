@@ -17,11 +17,41 @@ var (
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
 
-	talkgroupToChannel = map[int64]SlackChannelID{
-		3605:               UCPD, // UCB PD1 : #scanner-dispatches-ucpd
-		3606:               UCPD, // UCB PD2 : #scanner-dispatches-ucpd
-		3608:               UCPD, // UCB PD4 : #scanner-dispatches-ucpd
-		3609:               UCPD, // UCB PD5 : #scanner-dispatches-ucpd
+	talkgroupToChannel = map[int64]SlackChannelID{2100:               BERKELEY,
+		2105:               BERKELEY,
+		2106:               BERKELEY,
+		2107:               BERKELEY,
+		2108:               BERKELEY,
+		2109:               BERKELEY,
+		2110:               BERKELEY,
+		2111:               BERKELEY,
+		2112:               BERKELEY,
+		2671:               BERKELEY,
+		2672:               BERKELEY,
+		2691:               BERKELEY,
+		2692:               BERKELEY,
+		2711:               BERKELEY,
+		2712:               BERKELEY,
+		3100:               BERKELEY,
+		3105:               BERKELEY,
+		3106:               BERKELEY,
+		3108:               BERKELEY,
+		3110:               BERKELEY,
+		3112:               BERKELEY,
+		3605:               BERKELEY,
+		3606:               BERKELEY,
+		3608:               BERKELEY,
+		3609:               BERKELEY,
+		4100:               BERKELEY,
+		4105:               BERKELEY,
+		4106:               BERKELEY,
+		4107:               BERKELEY,
+		4108:               BERKELEY,
+		4109:               BERKELEY,
+		4110:               BERKELEY,
+		4111:               BERKELEY,
+		4112:               BERKELEY,
+		5506:               BERKELEY,
 		3055:               ALBANY,
 		3056:               ALBANY,
 		3057:               ALBANY,
