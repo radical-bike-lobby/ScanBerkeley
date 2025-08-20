@@ -187,15 +187,16 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 	})
 
 	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
+		defer http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
+		
 		r.Body = http.MaxBytesReader(w, r.Body, 20<<20+512)
 		req, err := createTransciptionRequest(r.Context(), config, r)
 		if err != nil {
-			writeErr(w, err)
+			log.Println("Error creating transcription request: ", err.Error()) 
+			// writeErr(w, err)
 			return
 		}
-		ch <- req
-
-		http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
+		ch <- req		
 	})
 
 	return mux
