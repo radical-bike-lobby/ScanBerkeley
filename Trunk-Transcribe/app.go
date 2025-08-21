@@ -226,11 +226,13 @@ func createTranscriptionRequestFromRdio(ctx context.Context, config *Config, r *
 	}
 
 	mr := multipart.NewReader(r.Body, params["boundary"])
+
+loop:
 	for {
 		p, err := mr.NextPart()
 		switch err {
 		case io.EOF:
-			break
+			break loop
 		case nil:
 		default:
 			return nil, err
