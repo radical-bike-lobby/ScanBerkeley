@@ -194,7 +194,7 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 		req, err := createTranscriptionRequestFromTrunkRecorder(r.Context(), config, r)
 		if err != nil {
 			log.Println("Error creating transcription request: ", err.Error())
-			// writeErr(w, err)
+			writeErr(w, err)
 			return
 		}
 		ch <- req
@@ -207,7 +207,6 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 		req, err := createTranscriptionRequestFromRdio(r.Context(), config, r)
 		if err != nil {
 			log.Println("Error creating transcription request: ", err.Error())
-			// writeErr(w, err)
 			return
 		}
 		ch <- req
@@ -258,11 +257,28 @@ loop:
 		return nil, err
 	}
 
-	if data, err := call.ToJson(); err != nil {
+	metadata, err := call.ToMetadata()
+	if err != nil {
 		return nil, err
-	} else {
-		return nil, fmt.Errorf("Successful parse of rdio request: %s", data)
 	}
+
+	request := &TranscriptionRequest{
+		Filename:     call.AudioName,
+		Data:         call.Audio,
+		Meta:         metadata,
+		PostToSlack:  false,
+		UploadToRdio: false,
+	}
+
+	channelID, ok := talkgroupToChannel[metadata.Talkgroup]
+	if ok && channelID == OAKLAND { // post only oakland to slack for now
+		request.PostToSlack = true
+	}
+
+	data, _ := call.ToJson()
+	log.Printf("Successful parse of rdio request: %s", data)
+
+	return request, nil
 
 }
 func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
@@ -364,6 +380,10 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) (string, error) {
 
+	if !req.PostToSlack {
+		return "", nil
+	}
+
 	key := req.FilePath()
 	data := req.Data
 	metadata := req.Meta
@@ -390,6 +410,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	wg.Go(func() error {
 		return postToSlack(gctx, config, key, data, metadata)
 	})
+
 	err = wg.Wait()
 	return msg, err
 }
@@ -484,6 +505,10 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 
 // uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
 func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
+
+	if !req.UploadToRdio {
+		return nil
+	}
 
 	filename, meta, reader := req.Filename, req.MetaRaw, bytes.NewReader(req.Data)
 

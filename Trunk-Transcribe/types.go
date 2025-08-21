@@ -245,18 +245,22 @@ func NewTranscriptionRequest(name string, data, meta []byte) (*TranscriptionRequ
 		return nil, err
 	}
 	return &TranscriptionRequest{
-		Filename: name,
-		Data:     data,
-		Meta:     metadata,
-		MetaRaw:  meta,
+		Filename:     name,
+		Data:         data,
+		Meta:         metadata,
+		MetaRaw:      meta,
+		PostToSlack:  true,
+		UploadToRdio: true,
 	}, nil
 }
 
 type TranscriptionRequest struct {
-	Filename string
-	Data     []byte
-	Meta     Metadata
-	MetaRaw  []byte
+	Filename     string
+	Data         []byte
+	Meta         Metadata
+	MetaRaw      []byte
+	PostToSlack  bool
+	UploadToRdio bool
 }
 
 func (t *TranscriptionRequest) FilePath() string {
@@ -266,22 +270,22 @@ func (t *TranscriptionRequest) FilePath() string {
 type Call struct {
 	Id             any       `json:"id"`
 	Audio          []byte    `json:"audio"`
-	AudioName      any       `json:"audioName"`
-	AudioType      any       `json:"audioType"`
+	AudioName      string    `json:"audioName"`
+	AudioType      string    `json:"audioType"`
 	DateTime       time.Time `json:"dateTime"`
 	Frequencies    any       `json:"frequencies"`
-	Frequency      any       `json:"frequency"`
+	Frequency      int64     `json:"frequency"`
 	Patches        any       `json:"patches"`
 	Source         any       `json:"source"`
 	Sources        any       `json:"sources"`
 	System         uint      `json:"system"`
-	Talkgroup      uint      `json:"talkgroup"`
-	systemLabel    any       `json:"systemLabel"`
-	talkgroupGroup any       `json:"talkgroupGroup"`
-	talkgroupLabel any       `json:"talkgroupLabel"`
-	talkgroupName  any       `json:"talkgroupName"`
-	talkgroupTag   any       `json:"talkgroupTag"`
-	units          any       `json:"units"`
+	Talkgroup      int64     `json:"talkgroup"`
+	SystemLabel    any       `json:"systemLabel"`
+	TalkgroupGroup string    `json:"talkgroupGroup"`
+	TalkgroupLabel string    `json:"talkgroupLabel"`
+	TalkgroupName  string    `json:"talkgroupName"`
+	TalkgroupTag   string    `json:"talkgroupTag"`
+	Units          any       `json:"units"`
 }
 
 type Unit struct {
@@ -343,6 +347,44 @@ func (call *Call) IsValid() (ok bool, err error) {
 	}
 
 	return ok, err
+}
+
+func (call *Call) ToMetadata() (Metadata, error) {
+
+	metadata := Metadata{
+		Freq:              call.Frequency,
+		StartTime:         0,
+		StopTime:          0,
+		Emergency:         0,
+		Priority:          0,
+		Mode:              0,
+		Duplex:            0,
+		Encrypted:         0,
+		CallLength:        0,
+		Talkgroup:         call.Talkgroup,
+		TalkgroupTag:      call.TalkgroupTag,
+		TalkGroupDesc:     call.TalkgroupLabel,
+		TalkGroupGroupTag: call.TalkgroupTag,
+		TalkGroupGroup:    call.TalkgroupGroup,
+		AudioType:         call.AudioType,
+		ShortName:         call.TalkgroupName,
+		AudioText:         "",
+		URL:               "",
+		FreqList:          nil,
+		Segments:          nil,
+	}
+
+	metadata.SrcList = []Source{}
+	b, err := json.Marshal(call.Sources)
+	if err != nil {
+		return metadata, err
+	}
+	err = json.Unmarshal(b, metadata.SrcList)
+	if err != nil {
+		return metadata, err
+	}
+
+	return metadata, nil
 }
 
 func (call *Call) ToJson() (string, error) {
@@ -428,7 +470,7 @@ func (call *Call) ParseMultipartContent(p *multipart.Part, b []byte) {
 
 	case "frequency":
 		if i, err := strconv.Atoi(string(b)); err == nil && i > 0 {
-			call.Frequency = uint(i)
+			call.Frequency = int64(i)
 		}
 
 	case "patches", "patched_talkgroups":
@@ -484,7 +526,7 @@ func (call *Call) ParseMultipartContent(p *multipart.Part, b []byte) {
 									if units == nil {
 										units = NewUnits()
 									}
-									switch units := call.units.(type) {
+									switch units := call.Units.(type) {
 									case *Units:
 										units.Add(uint(s), t)
 									}
@@ -495,7 +537,7 @@ func (call *Call) ParseMultipartContent(p *multipart.Part, b []byte) {
 					sources = append(sources, src)
 				}
 				call.Sources = sources
-				call.units = units
+				call.Units = units
 			}
 		}
 
@@ -505,31 +547,31 @@ func (call *Call) ParseMultipartContent(p *multipart.Part, b []byte) {
 		}
 
 	case "systemLabel":
-		call.systemLabel = string(b)
+		call.SystemLabel = string(b)
 
 	case "talkgroup", "talkgroupId":
 		if i, err := strconv.Atoi(string(b)); err == nil && i > 0 {
-			call.Talkgroup = uint(i)
+			call.Talkgroup = int64(i)
 		}
 
 	case "talkgroupGroup":
 		if s := string(b); len(s) > 0 && s != "-" {
-			call.talkgroupGroup = s
+			call.TalkgroupGroup = s
 		}
 
 	case "talkgroupLabel":
 		if s := string(b); len(s) > 0 && s != "-" {
-			call.talkgroupLabel = s
+			call.TalkgroupLabel = s
 		}
 
 	case "talkgroupName":
 		if s := string(b); len(s) > 0 && s != "-" {
-			call.talkgroupName = s
+			call.TalkgroupName = s
 		}
 
 	case "talkgroupTag":
 		if s := string(b); len(s) > 0 && s != "-" {
-			call.talkgroupTag = s
+			call.TalkgroupTag = s
 		}
 	}
 }
