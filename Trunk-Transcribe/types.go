@@ -379,7 +379,7 @@ func (call *Call) ToMetadata() (Metadata, error) {
 	if err != nil {
 		return metadata, err
 	}
-	err = json.Unmarshal(b, metadata.SrcList)
+	err = json.Unmarshal(b, &metadata.SrcList)
 	if err != nil {
 		return metadata, err
 	}
