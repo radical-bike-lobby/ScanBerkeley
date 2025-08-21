@@ -194,7 +194,7 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 		req, err := createTranscriptionRequestFromTrunkRecorder(r.Context(), config, r)
 		if err != nil {
 			log.Println("Error creating transcription request: ", err.Error())
-			// writeErr(w, err)
+			writeErr(w, err)
 			return
 		}
 		ch <- req
@@ -207,7 +207,6 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 		req, err := createTranscriptionRequestFromRdio(r.Context(), config, r)
 		if err != nil {
 			log.Println("Error creating transcription request: ", err.Error())
-			// writeErr(w, err)
 			return
 		}
 		ch <- req
@@ -258,11 +257,21 @@ loop:
 		return nil, err
 	}
 
-	if data, err := call.ToJson(); err != nil {
+	metadata, err := call.ToMetadata()
+	if err != nil {
 		return nil, err
-	} else {
-		return nil, fmt.Errorf("Successful parse of rdio request: %s", data)
 	}
+	request := &TranscriptionRequest{
+		Filename:    call.AudioName,
+		Data:        call.Audio,
+		Meta:        metadata,
+		PostToSlack: false,
+	}
+
+	data, _ := call.ToJson()
+	log.Printf("Successful parse of rdio request: %s", data)
+
+	return request, nil
 
 }
 func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
@@ -387,9 +396,11 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 		return uploadS3(gctx, config.uploader, key, bytes.NewReader(data), metadata)
 	})
 
-	wg.Go(func() error {
-		return postToSlack(gctx, config, key, data, metadata)
-	})
+	if req.PostToSlack {
+		wg.Go(func() error {
+			return postToSlack(gctx, config, key, data, metadata)
+		})
+	}
 	err = wg.Wait()
 	return msg, err
 }
@@ -484,6 +495,10 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 
 // uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
 func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
+
+	if len(req.MetaRaw) == 0 {
+		return nil
+	}
 
 	filename, meta, reader := req.Filename, req.MetaRaw, bytes.NewReader(req.Data)
 
