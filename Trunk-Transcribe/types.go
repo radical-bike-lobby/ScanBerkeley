@@ -245,20 +245,22 @@ func NewTranscriptionRequest(name string, data, meta []byte) (*TranscriptionRequ
 		return nil, err
 	}
 	return &TranscriptionRequest{
-		Filename:    name,
-		Data:        data,
-		Meta:        metadata,
-		MetaRaw:     meta,
-		PostToSlack: true,
+		Filename:     name,
+		Data:         data,
+		Meta:         metadata,
+		MetaRaw:      meta,
+		PostToSlack:  true,
+		UploadToRdio: true,
 	}, nil
 }
 
 type TranscriptionRequest struct {
-	Filename    string
-	Data        []byte
-	Meta        Metadata
-	MetaRaw     []byte
-	PostToSlack bool
+	Filename     string
+	Data         []byte
+	Meta         Metadata
+	MetaRaw      []byte
+	PostToSlack  bool
+	UploadToRdio bool
 }
 
 func (t *TranscriptionRequest) FilePath() string {

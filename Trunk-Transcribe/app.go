@@ -496,7 +496,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 // uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
 func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
 
-	if len(req.MetaRaw) == 0 {
+	if !req.UploadToRdio {
 		return nil
 	}
 
