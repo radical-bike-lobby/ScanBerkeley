@@ -352,7 +352,7 @@ func (call *Call) ToJson() (string, error) {
 		call.Audio = audio
 	}()
 
-	if b, err := json.MarshalIndent(call, "", " "); err == nil {
+	if b, err := json.Marshal(call); err == nil {
 		return string(b), nil
 	} else {
 		return "", fmt.Errorf("call.tojson: %v", err)
