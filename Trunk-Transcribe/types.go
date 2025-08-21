@@ -276,12 +276,12 @@ type Call struct {
 	Sources        any       `json:"sources"`
 	System         uint      `json:"system"`
 	Talkgroup      uint      `json:"talkgroup"`
-	systemLabel    any
-	talkgroupGroup any
-	talkgroupLabel any
-	talkgroupName  any
-	talkgroupTag   any
-	units          any
+	systemLabel    any       `json:"systemLabel"`
+	talkgroupGroup any       `json:"talkgroupGroup"`
+	talkgroupLabel any       `json:"talkgroupLabel"`
+	talkgroupName  any       `json:"talkgroupName"`
+	talkgroupTag   any       `json:"talkgroupTag"`
+	units          any       `json:"units"`
 }
 
 type Unit struct {
@@ -346,6 +346,12 @@ func (call *Call) IsValid() (ok bool, err error) {
 }
 
 func (call *Call) ToJson() (string, error) {
+	audio := call.Audio
+	call.Audio = nil
+	defer func() {
+		call.Audio = audio
+	}()
+
 	if b, err := json.MarshalIndent(call, "", " "); err == nil {
 		return string(b), nil
 	} else {

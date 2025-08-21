@@ -256,7 +256,9 @@ loop:
 
 	if ok, err := call.IsValid(); !ok {
 		return nil, err
-	} else if data, err := call.ToJson(); err != nil {
+	}
+
+	if data, err := call.ToJson(); err != nil {
 		return nil, err
 	} else {
 		return nil, fmt.Errorf("Successful parse of rdio request: %s", data)
