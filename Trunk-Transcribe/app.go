@@ -261,11 +261,18 @@ loop:
 	if err != nil {
 		return nil, err
 	}
+
 	request := &TranscriptionRequest{
-		Filename:    call.AudioName,
-		Data:        call.Audio,
-		Meta:        metadata,
-		PostToSlack: false,
+		Filename:     call.AudioName,
+		Data:         call.Audio,
+		Meta:         metadata,
+		PostToSlack:  false,
+		UploadToRdio: false,
+	}
+
+	channelID, ok := talkgroupToChannel[metadata.Talkgroup]
+	if ok && channelID == OAKLAND { // post only oakland to slack for now
+		request.PostToSlack = true
 	}
 
 	data, _ := call.ToJson()
