@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -188,27 +189,85 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 
 	mux.HandleFunc("/transcribe", func(w http.ResponseWriter, r *http.Request) {
 		defer http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
-		
+
 		r.Body = http.MaxBytesReader(w, r.Body, 20<<20+512)
-		req, err := createTransciptionRequest(r.Context(), config, r)
+		req, err := createTranscriptionRequestFromTrunkRecorder(r.Context(), config, r)
 		if err != nil {
-			log.Println("Error creating transcription request: ", err.Error()) 
+			log.Println("Error creating transcription request: ", err.Error())
 			// writeErr(w, err)
 			return
 		}
-		ch <- req		
+		ch <- req
+	})
+
+	mux.HandleFunc("/transcribe/api/call-upload", func(w http.ResponseWriter, r *http.Request) {
+		defer http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
+
+		r.Body = http.MaxBytesReader(w, r.Body, 20<<20+512)
+		req, err := createTranscriptionRequestFromRdio(r.Context(), config, r)
+		if err != nil {
+			log.Println("Error creating transcription request: ", err.Error())
+			// writeErr(w, err)
+			return
+		}
+		ch <- req
 	})
 
 	return mux
 }
 
-// createTransciptionRequest creates a TranscriptionRequest object from the incoming http request
-func createTransciptionRequest(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
+func createTranscriptionRequestFromRdio(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
+
+	var call Call
+	var key string
+	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, err
+	}
+
+	mr := multipart.NewReader(r.Body, params["boundary"])
+	for {
+		p, err := mr.NextPart()
+		switch err {
+		case io.EOF:
+			break
+		case nil:
+		default:
+			return nil, err
+		}
+
+		b, err := io.ReadAll(p)
+		if err != nil {
+			return nil, err
+		}
+
+		switch p.FormName() {
+		case "key":
+			key = string(b)
+			if key != "1" {
+				return nil, errors.New("Wrong api key received from rdio upstream")
+			}
+		default:
+			call.ParseMultipartContent(p, b)
+		}
+	}
+
+	if ok, err := call.IsValid(); !ok {
+		return nil, err
+	} else if data, err := call.ToJson(); err != nil {
+		return nil, err
+	} else {
+		return nil, fmt.Errorf("Successful parse of rdio request: %s", data)
+	}
+
+}
+func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Config, r *http.Request) (*TranscriptionRequest, error) {
 
 	err := r.ParseMultipartForm(1 << 20)
 	if err != nil {
 		return nil, err
 	}
+
 	js, _, err := r.FormFile("call_json")
 	if err != nil {
 		return nil, err
@@ -384,7 +443,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	channelID, ok := talkgroupToChannel[meta.Talkgroup]
 	if !ok {
 		log.Println("Could not determine channel for talkgroup : ", meta.Talkgroup)
-		return nil		
+		return nil
 	}
 
 	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
