@@ -270,11 +270,6 @@ loop:
 		UploadToRdio: false,
 	}
 
-	channelID, ok := talkgroupToChannel[metadata.Talkgroup]
-	if ok && channelID == OAKLAND { // post only oakland to slack for now
-		request.PostToSlack = true
-	}
-
 	data, _ := call.ToJson()
 	log.Printf("Successful parse of rdio request: %s", data)
 
