@@ -499,9 +499,9 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 			}
 		}
 		_, _, err = api.PostMessageContext(
-			ctx
+			ctx,
 			channelID,
-			slack.MsgOptionText(message, false), // `false` for not using Markdown			
+			slack.MsgOptionText(message, false), // `false` for not using Markdown
 		)
 		if err != nil {
 			log.Println("Error posting msg to slack: ", err)
