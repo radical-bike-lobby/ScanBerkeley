@@ -113,7 +113,7 @@
       "audioArchive": true,
       "callLog": true,
       "uploadScript": "/app/transcribe.sh",
-      "enabled": true
+      "enabled": false
     }
   ]
 }

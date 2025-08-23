@@ -460,13 +460,13 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	}
 
 	// determine channel
-	channelID, ok := talkgroupToChannel[meta.Talkgroup]
+	channelIDs, ok := talkgroupToChannel[meta.Talkgroup]
 	if !ok {
 		log.Println("Could not determine channel for talkgroup : ", meta.Talkgroup)
 		return nil
 	}
 
-	slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
+	slackMeta := ExtractSlackMeta(meta, channelIDs, notifsMap)
 	mentions := slackMeta.Mentions
 	if str := strings.Join(mentions, " "); len(str) > 0 {
 		blocks = append(blocks, str)
@@ -481,19 +481,35 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	sentances := strings.Join(blocks, "\n")
 
 	// upload audio
-	filename := filepath.Base(key)
-	_, err := config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
-		Filename:       filename,
-		FileSize:       len(data),
-		Reader:         reader,
-		InitialComment: sentances,
-		Channel:        string(channelID),
-	})
-	if err != nil {
-		log.Println("Error uploading file to slack: ", err)
-	} /*else {
-		log.Printf("Uploaded file: %s with title: %s to channel: %v", summary.ID, summary.Title, channelID)
-	}*/
+	var summary *slack.FileSummary
+	var err error
+	for _, channelID := range channelIDs {
+		if summary == nil {
+			filename := filepath.Base(key)
+			summary, err = config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+				Filename:       filename,
+				FileSize:       len(data),
+				Reader:         reader,
+				InitialComment: sentances,
+				Channel:        string(channelID),
+			})
+			if err != nil {
+				log.Println("Error uploading file to slack: ", err)
+				return err
+			}
+		}
+		_, _, err = api.PostMessageContext(
+			ctx
+			channelID,
+			slack.MsgOptionText(message, false), // `false` for not using Markdown			
+		)
+		if err != nil {
+			log.Println("Error posting msg to slack: ", err)
+			return err
+		}
+	}
+
+	// log.Printf("Uploaded file: %s with title: %s to channel: %v", summary.ID, summary.Title, channelID)
 
 	return err
 }
@@ -539,7 +555,7 @@ func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
 // It accepts a sentace to match keywords against. The keywords map provides a map
 // of mentions to keywords to match.
 
-func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[SlackUserID][]Notifs) (slackMeta SlackMeta) {
+func ExtractSlackMeta(meta Metadata, channelIDs []SlackChannelID, notifsMap map[SlackUserID][]Notifs) (slackMeta SlackMeta) {
 
 	text := strings.ToLower(meta.AudioText)
 	words := wordsRegex.FindAllString(text, -1) //split text into words array
@@ -548,7 +564,7 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 
 	for userID, notifs := range notifsMap {
 		for _, notif := range notifs {
-			if notif.MatchesText(channelID, talkgroupID, text, words) {
+			if notif.MatchesText(channelIDs, talkgroupID, text, words) {
 				slackMeta.Mentions = append(slackMeta.Mentions, "<@"+string(userID)+">")
 				break
 			}
