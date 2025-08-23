@@ -478,7 +478,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	}
 
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
-	sentances := strings.Join(blocks, "\n")
+	sentences := strings.Join(blocks, "\n")
 
 	// upload audio
 	var summary *slack.FileSummary
@@ -490,7 +490,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 				Filename:       filename,
 				FileSize:       len(data),
 				Reader:         reader,
-				InitialComment: sentances,
+				InitialComment: sentences,
 				Channel:        string(channelID),
 			})
 			if err != nil {
@@ -498,10 +498,10 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 				return err
 			}
 		}
-		_, _, err = api.PostMessageContext(
+		_, _, err = config.slackClient.PostMessageContext(
 			ctx,
-			channelID,
-			slack.MsgOptionText(message, false), // `false` for not using Markdown
+			string(channelID),
+			slack.MsgOptionText(sentences, false), // `false` for not using Markdown
 		)
 		if err != nil {
 			log.Println("Error posting msg to slack: ", err)

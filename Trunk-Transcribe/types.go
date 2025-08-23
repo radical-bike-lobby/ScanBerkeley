@@ -12,8 +12,8 @@ type SlackChannelID string
 
 const (
 	UCPD              SlackChannelID = "C06J8T3EUP9"
-	BERKELEY          SlackChannelID = "C06A28PMXFZ"
-	BERKELEY_BFD      SlackChannelID = "C09BPM3A542"
+	BERKELEY                         = "C06A28PMXFZ"
+	BERKELEY_BFD                     = "C09BPM3A542"
 	OAKLAND                          = "C070R7LGVDY"
 	ALBANY                           = "C0713T4KMMX"
 	EMERYVILLE                       = "C07123TKG3E"
@@ -143,7 +143,14 @@ type Notifs struct {
 }
 
 func (n Notifs) MatchesText(channelIDs []SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
-	listeningToChannel := slices.Contains(n.Channels, channelID)
+	var listeningToChannel bool
+	for _, channel := range channelIDs {
+		if slices.Contains(n.Channels, channel) {
+			listeningToChannel = true
+			break
+		}
+	}
+
 	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
 
 	switch {

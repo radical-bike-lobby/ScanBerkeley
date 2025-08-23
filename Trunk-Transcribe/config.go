@@ -132,7 +132,7 @@ var notifsMap = map[SlackUserID][]Notifs{
 		},
 		{
 			Include:    []string{"trauma", "trauma activation"},
-			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL, CHILDRENS_HOSPITAL},
+			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL_TALKGROUP, CHILDRENS_HOSPITAL_TALKGROUP},
 		},
 	},
 	NAVEEN: []Notifs{{
