@@ -148,13 +148,11 @@ type Notifs struct {
 	TalkGroups []TalkGroupID    //individual talkgroups to listen to (could be exclusive of channels)
 }
 
-func (n Notifs) MatchesText(channelIDs []SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
+func (n Notifs) MatchesText(channel SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
 	var listeningToChannel bool
-	for _, channel := range channelIDs {
-		if slices.Contains(n.Channels, channel) {
-			listeningToChannel = true
-			break
-		}
+
+	if slices.Contains(n.Channels, channel) {
+		listeningToChannel = true
 	}
 
 	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
