@@ -508,7 +508,7 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 
 		file, _, _, err := config.slackClient.GetFileInfo(summary.ID, 0, 0)
 		if err != nil {
-			log.Println("Failed to get file info: %v", err)
+			log.Printf("Failed to get file info: %v", err)
 			return err
 		}
 
