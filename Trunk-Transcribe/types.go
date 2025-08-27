@@ -11,14 +11,20 @@ import (
 type SlackChannelID string
 
 const (
-	UCPD              SlackChannelID = "C06J8T3EUP9"
-	BERKELEY                         = "C06A28PMXFZ"
-	BERKELEY_BFD                     = "C09BPM3A542"
-	OAKLAND                          = "C070R7LGVDY"
-	ALBANY                           = "C0713T4KMMX"
-	EMERYVILLE                       = "C07123TKG3E"
-	HIGHLAND_HOSPITAL                = "C09BAUWEAMD"
+	UCPD             SlackChannelID = "C06J8T3EUP9"
+	BERKELEY                        = "C06A28PMXFZ"
+	BERKELEY_FIRE                   = "C09BPM3A542"
+	OAKLAND                         = "C070R7LGVDY"
+	OAKLAND_FIRE                    = "C09D19L6X0Q"
+	ALBANY                          = "C0713T4KMMX"
+	EMERYVILLE                      = "C07123TKG3E"
+	HOSPITALS                       = "C09C2R5S1DH"
+	HOSPITALS_TRAUMA                = "C09BAUWEAMD"
 )
+
+var BERKELEY_CHANNELS = []SlackChannelID{
+	UCPD, BERKELEY, BERKELEY_FIRE,
+}
 
 type TalkGroupID int64
 

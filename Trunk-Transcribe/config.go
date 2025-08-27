@@ -18,15 +18,15 @@ var (
 	defaultChannelID = BERKELEY // #scanner-dispatches
 
 	talkgroupToChannel = map[int64][]SlackChannelID{
-		2100:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2105:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2106:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2107:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2108:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2109:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2110:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2111:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
-		2112:                          []SlackChannelID{BERKELEY, BERKELEY_BFD},
+		2100:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2105:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2106:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2107:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2108:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2109:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2110:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2111:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
+		2112:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
 		2671:                          []SlackChannelID{BERKELEY},
 		2672:                          []SlackChannelID{BERKELEY},
 		2691:                          []SlackChannelID{BERKELEY},
@@ -89,31 +89,31 @@ var (
 		3429:                          []SlackChannelID{OAKLAND},
 		3447:                          []SlackChannelID{OAKLAND},
 		3448:                          []SlackChannelID{OAKLAND},
-		2400:                          []SlackChannelID{OAKLAND},
-		2405:                          []SlackChannelID{OAKLAND},
-		2406:                          []SlackChannelID{OAKLAND},
-		2407:                          []SlackChannelID{OAKLAND},
-		2408:                          []SlackChannelID{OAKLAND},
-		2409:                          []SlackChannelID{OAKLAND},
-		2410:                          []SlackChannelID{OAKLAND},
-		2411:                          []SlackChannelID{OAKLAND},
-		2412:                          []SlackChannelID{OAKLAND},
-		2413:                          []SlackChannelID{OAKLAND},
-		2414:                          []SlackChannelID{OAKLAND},
-		2416:                          []SlackChannelID{OAKLAND},
-		2417:                          []SlackChannelID{OAKLAND},
-		2434:                          []SlackChannelID{OAKLAND},
-		2436:                          []SlackChannelID{OAKLAND},
+		2400:                          []SlackChannelID{OAKLAND_FIRE},
+		2405:                          []SlackChannelID{OAKLAND_FIRE},
+		2406:                          []SlackChannelID{OAKLAND_FIRE},
+		2407:                          []SlackChannelID{OAKLAND_FIRE},
+		2408:                          []SlackChannelID{OAKLAND_FIRE},
+		2409:                          []SlackChannelID{OAKLAND_FIRE},
+		2410:                          []SlackChannelID{OAKLAND_FIRE},
+		2411:                          []SlackChannelID{OAKLAND_FIRE},
+		2412:                          []SlackChannelID{OAKLAND_FIRE},
+		2413:                          []SlackChannelID{OAKLAND_FIRE},
+		2414:                          []SlackChannelID{OAKLAND_FIRE},
+		2416:                          []SlackChannelID{OAKLAND_FIRE},
+		2417:                          []SlackChannelID{OAKLAND_FIRE},
+		2434:                          []SlackChannelID{OAKLAND_FIRE},
+		2436:                          []SlackChannelID{OAKLAND_FIRE},
 		4405:                          []SlackChannelID{OAKLAND},
 		4407:                          []SlackChannelID{OAKLAND},
 		4415:                          []SlackChannelID{OAKLAND},
 		4421:                          []SlackChannelID{OAKLAND},
 		4422:                          []SlackChannelID{OAKLAND},
 		4423:                          []SlackChannelID{OAKLAND},
-		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{OAKLAND},                    // Childrens Hospital
-		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{OAKLAND, HIGHLAND_HOSPITAL}, // Highland Hospital
-		5516:                          []SlackChannelID{OAKLAND},                    // Summit Hospital
-		5512:                          []SlackChannelID{OAKLAND},
+		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{HOSPITALS_TRAUMA}, // Childrens Hospital
+		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{HOSPITALS_TRAUMA}, // Highland Hospital
+		5516:                          []SlackChannelID{HOSPITALS},        // Summit Hospital
+		5512:                          []SlackChannelID{HOSPITALS},
 	}
 
 	location *time.Location
@@ -131,8 +131,7 @@ var notifsMap = map[SlackUserID][]Notifs{
 			Channels: []SlackChannelID{BERKELEY, UCPD},
 		},
 		{
-			Include:    []string{"trauma", "trauma activation"},
-			TalkGroups: []TalkGroupID{HIGHLAND_HOSPITAL_TALKGROUP, CHILDRENS_HOSPITAL_TALKGROUP},
+			Include: []string{"trauma", "trauma activation"},
 		},
 	},
 	NAVEEN: []Notifs{{

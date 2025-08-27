@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,8 +39,6 @@ var r2Secret string = os.Getenv("CLOUDFLARE_R2_SECRET")
 var r2Path string = "https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev"
 
 // slack setup
-var webhookUrl string = os.Getenv("SLACK_WEBHOOK_URL")
-var webhookUrlUCPD string = os.Getenv("SLACK_WEBHOOK_URL_UCPD")
 var slackapiSecret string = os.Getenv("SLACK_API_SECRET")
 
 //go:embed templates/*
@@ -48,10 +47,8 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	uploader       *s3manager.Uploader
-	slackClient    *slack.Client
-	webhookUrl     string
-	webhookUrlUCPD string
+	uploader    *s3manager.Uploader
+	slackClient *slack.Client
 }
 
 var dedupeCache *lru.Cache[string, bool]
@@ -77,8 +74,8 @@ func main() {
 	}
 
 	var api *slack.Client
-	if slackapiSecret == "" || webhookUrl == "" {
-		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
+	if slackapiSecret == "" {
+		log.Println("Missing SLACK_API_SECRET. Slack notifications disabled.")
 	} else {
 		api = slack.New(slackapiSecret)
 	}
@@ -95,10 +92,8 @@ func main() {
 	uploader := s3manager.NewUploader(session.New(r2Config))
 
 	config := &Config{
-		uploader:       uploader,
-		slackClient:    api,
-		webhookUrl:     webhookUrl,
-		webhookUrlUCPD: webhookUrlUCPD,
+		uploader:    uploader,
+		slackClient: api,
 	}
 
 	ch := make(chan *TranscriptionRequest)
@@ -262,11 +257,20 @@ loop:
 		return nil, err
 	}
 
+	channels, postToSlack := talkgroupToChannel[metadata.Talkgroup]
+
+	for _, channel := range channels {
+		if slices.Contains(BERKELEY_CHANNELS, channel) { // do not post Berkeley channels
+			postToSlack = false
+			break
+		}
+	}
+
 	request := &TranscriptionRequest{
 		Filename:     call.AudioName,
 		Data:         call.Audio,
 		Meta:         metadata,
-		PostToSlack:  false,
+		PostToSlack:  postToSlack,
 		UploadToRdio: false,
 	}
 
