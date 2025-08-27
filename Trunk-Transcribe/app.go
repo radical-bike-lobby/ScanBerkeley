@@ -464,6 +464,12 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		blocks[i] = tag + ": " + block
 	}
 
+	// Talkgroup
+	// Transcription
+	// Audio link
+	// Audio info: length, date
+	// Mentions
+
 	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
 	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
@@ -491,9 +497,8 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		// upload audio
 
 		if summary == nil {
-			filename := filepath.Base(key)
 			summary, err = config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
-				Filename:       filename,
+				Filename:       filepath.Base(key),
 				FileSize:       len(data),
 				Reader:         reader,
 				InitialComment: sentences,
@@ -503,27 +508,18 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 				log.Println("Error uploading file to slack: ", err)
 				return err
 			}
-			continue
-		}
 
-		file, _, _, err := config.slackClient.GetFileInfo(summary.ID, 0, 0)
-		if err != nil {
+		} else if file, _, _, err := config.slackClient.GetFileInfo(summary.ID, 0, 0); err != nil {
 			log.Printf("Failed to get file info: %v", err)
 			return err
-		}
-
-		_, _, err = config.slackClient.PostMessageContext(
+		} else if _, _, err = config.slackClient.PostMessageContext(
 			ctx,
 			string(channelID),
-			slack.MsgOptionText(file.Permalink, false), // `false` for not using Markdown
-		)
-		if err != nil {
+			slack.MsgOptionText(file.Permalink, false)); err != nil {
 			log.Println("Error posting msg to slack: ", err)
 			return err
 		}
 	}
-
-	// log.Printf("Uploaded file: %s with title: %s to channel: %v", summary.ID, summary.Title, channelID)
 
 	return err
 }
