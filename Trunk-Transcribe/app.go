@@ -438,9 +438,10 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	reader := bytes.NewReader(data)
 
 	if config.slackClient == nil {
-		log.Println("Missing SLACK_API_SECRET or SLACK_WEBHOOK_URL. Slack notifications disabled.")
+		log.Println("Slack notifications disabled.")
 		return nil
 	}
+
 	if meta.AudioText == "" {
 		meta.AudioText = "Could not transcribe audio"
 	}
@@ -463,6 +464,10 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		blocks[i] = tag + ": " + block
 	}
 
+	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
+	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
+	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
+
 	// determine channel
 	channelIDs, ok := talkgroupToChannel[meta.Talkgroup]
 	if !ok {
@@ -476,17 +481,12 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	for _, channelID := range channelIDs {
 		slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 		mentions := slackMeta.Mentions
+		message := blocks
 		if str := strings.Join(mentions, " "); len(str) > 0 {
-			blocks = append(blocks, str)
-		}
-		blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
-		blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
-		if addr := slackMeta.Address.String(); len(addr) > 0 {
-			blocks = append(blocks, "Location: "+addr)
+			message = append(message, str)
 		}
 
-		blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
-		sentences := strings.Join(blocks, "\n")
+		sentences := strings.Join(message, "\n")
 
 		// upload audio
 
