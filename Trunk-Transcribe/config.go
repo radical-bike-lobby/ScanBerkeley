@@ -48,7 +48,7 @@ var (
 		4110:                          []SlackChannelID{BERKELEY},
 		4111:                          []SlackChannelID{BERKELEY},
 		4112:                          []SlackChannelID{BERKELEY},
-		ALTA_BATES_HOSPITAL_TALKGROUP: []SlackChannelID{BERKELEY},
+		ALTA_BATES_HOSPITAL_TALKGROUP: []SlackChannelID{HOSPITALS},
 		3605:                          []SlackChannelID{UCPD},
 		3606:                          []SlackChannelID{UCPD},
 		3608:                          []SlackChannelID{UCPD},
