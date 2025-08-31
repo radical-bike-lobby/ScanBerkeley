@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
@@ -20,10 +19,41 @@ const (
 	EMERYVILLE                      = "C07123TKG3E"
 	HOSPITALS                       = "C09C2R5S1DH"
 	HOSPITALS_TRAUMA                = "C09BAUWEAMD"
+
+	BERKELEY_SECONDARY      = "C06A70Q40KF"
+	BERKELEY_FIRE_SECONDARY = "C09CPFU4NAF"
+	UCPD_SECONDARY          = "C09CTH41F6W"
+	OAKLAND_SECONDARY       = "C09CS0HD7FX"
+	OAKLAND_FIRE_SECONDARY  = "C09CYEX1D60"
+	ALBANY_SECONDARY        = "C09CE3ULLFR"
+	PIEDMONT                = "C09DMJ8BHNU"
+	EMERYVILLE_SECONDARY    = "C09CE3UECKH"
+	ALAMEDA                 = "C09CE3VGZD5"
+	ALAMEDA_COUNTY          = "C09CUHT16PQ"
+	ALAMEDA_COUNTY_EMS      = "C09CPFY9J2X"
+	ALAMEDA_COUNTY_FIRE     = "C09CS0M0VE1"
+	ALAMEDA_COUNTY_SERVICES = "C09D7P5AV6V"
+	AMR_CCC                 = "C09CUHU219U"
+	BART                    = "C09CUHTUYKG"
+	EAST_BAY_REGIONAL_PARK  = "C09DMJBH8MN"
+	FALCK_AMBULANCE         = "C09CPFTM4F5"
+	HOSPITALS_SECONDARY     = "C09CYF3F5GU"
 )
 
 var BERKELEY_CHANNELS = []SlackChannelID{
 	UCPD, BERKELEY, BERKELEY_FIRE,
+}
+
+var PRIMARY_CHANNELS = []SlackChannelID{
+	UCPD,
+	BERKELEY,
+	BERKELEY_FIRE,
+	OAKLAND,
+	OAKLAND_FIRE,
+	ALBANY,
+	EMERYVILLE,
+	HOSPITALS,
+	HOSPITALS_TRAUMA,
 }
 
 type TalkGroupID int64
@@ -148,13 +178,8 @@ type Notifs struct {
 	TalkGroups []TalkGroupID    //individual talkgroups to listen to (could be exclusive of channels)
 }
 
-func (n Notifs) MatchesText(channel SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
-	var listeningToChannel bool
-
-	if slices.Contains(n.Channels, channel) {
-		listeningToChannel = true
-	}
-
+func (n Notifs) MatchesText(channelID SlackChannelID, talkgroupID TalkGroupID, text string, words []string) bool {
+	listeningToChannel := slices.Contains(n.Channels, channelID)
 	listeningToTalkgroup := slices.Contains(n.TalkGroups, TalkGroupID(talkgroupID))
 
 	switch {
@@ -245,28 +270,11 @@ type CloudflareWhisperOutput struct {
 }
 
 type TranscriptionRequest struct {
-	Filename     string
-	Data         []byte
-	Meta         Metadata
-	MetaRaw      []byte
-	PostToSlack  bool
-	UploadToRdio bool
-}
-
-func NewTranscriptionRequest(name string, data, meta []byte) (*TranscriptionRequest, error) {
-	var metadata Metadata
-	err := json.Unmarshal(meta, &metadata)
-	if err != nil {
-		return nil, err
-	}
-	return &TranscriptionRequest{
-		Filename:     name,
-		Data:         data,
-		Meta:         metadata,
-		MetaRaw:      meta,
-		PostToSlack:  true,
-		UploadToRdio: true,
-	}, nil
+	Filename      string
+	Data          []byte
+	Meta          Metadata
+	SlackChannels []SlackChannelID
+	UploadToRdio  bool // whether or not this call should be uploaded to rdio
 }
 
 func (t *TranscriptionRequest) FilePath() string {

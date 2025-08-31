@@ -1,8 +1,9 @@
 package main
 
 import (
+	"log"
 	"regexp"
-	"time"
+	"strings"
 )
 
 var (
@@ -13,110 +14,166 @@ var (
 	versusRegex  = regexp.MustCompile(modeString + `.+(vs|versus|verses)(\.)?.+` + modeString)
 	streets      = []string{"Acton", "Ada", "Addison", "Adeline", "Alcatraz", "Allston", "Ashby", "Bancroft", "Benvenue", "Berryman", "Blake", "Bonar", "Bonita", "Bowditch", "Buena", "California", "Camelia", "Carleton", "Carlotta", "Cedar", "Center", "Channing", "Chestnut", "Claremont", "Codornices", "College", "Cragmont", "Delaware", "Derby", "Dwight", "Eastshore", "Edith", "Elmwood", "Euclid", "Francisco", "Fresno", "Gilman", "Grizzly", "Harrison", "Hearst", "Heinz", "Henry", "Hillegass", "Holly", "Hopkins", "Josephine", "Kains", "Keoncrest", "King", "LeConte", "LeRoy", "Hilgard", "Mabel", "Marin", "Martin", "MLK", "Milvia", "Monterey", "Napa", "Neilson", "Oregon", "Parker", "Piedmont", "Posen", "Rose", "Russell", "Sacramento", "San Pablo", "Santa", "Fe", "Shattuck", "Solano", "Sonoma", "Spruce", "Telegraph", "Alameda", "Thousand", "Oaks", "University", "Vine", "Virginia", "Ward", "Woolsey"}
 	modifiers    = []string{"street", "boulevard", "road", "path", "way", "avenue", "highway"}
-	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", "ring on three", "code 2", "code 3", "code 4", "code 34", "en route", "case number", "berry brothers", "rita run", "DBF", "Falck", "Falck on order", "this is Falck", "Flock camera", "10-four", "10-4", "10 four", "His Lordships", "Cesar Chavez Park", "10-9 your traffic", "copy", "tow", "your beat"}
+	terms        = []string{"bike", "bicycle", "pedestrian", "vehicle", "injury", "victim", "versus", "transport", "concious", "breathing", "alta bates", "highland", "BFD", "Adam", "ID tech", "ring on three", "code 2", "code 3", "code 4", "code 34", "en route", "case number", "berry brothers", "rita run", "DBF", "Falck", "Falck on order", "this is Falck", "Flock camera", "10-four", "10-4", "10 four", "His Lordships", "Cesar Chavez Park", "10-9 your traffic", "copy", "tow", "the beat"}
 
 	defaultChannelID = BERKELEY // #scanner-dispatches
 
 	talkgroupToChannel = map[int64][]SlackChannelID{
-		2100:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2105:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2106:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2107:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2108:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2109:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2110:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2111:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2112:                          []SlackChannelID{BERKELEY, BERKELEY_FIRE},
-		2671:                          []SlackChannelID{BERKELEY},
-		2672:                          []SlackChannelID{BERKELEY},
-		2691:                          []SlackChannelID{BERKELEY},
-		2692:                          []SlackChannelID{BERKELEY},
-		2711:                          []SlackChannelID{BERKELEY},
-		2712:                          []SlackChannelID{BERKELEY},
-		3100:                          []SlackChannelID{BERKELEY},
-		3105:                          []SlackChannelID{BERKELEY},
-		3106:                          []SlackChannelID{BERKELEY},
-		3108:                          []SlackChannelID{BERKELEY},
-		3110:                          []SlackChannelID{BERKELEY},
-		3112:                          []SlackChannelID{BERKELEY},
-		4100:                          []SlackChannelID{BERKELEY},
-		4105:                          []SlackChannelID{BERKELEY},
-		4106:                          []SlackChannelID{BERKELEY},
-		4107:                          []SlackChannelID{BERKELEY},
-		4108:                          []SlackChannelID{BERKELEY},
-		4109:                          []SlackChannelID{BERKELEY},
-		4110:                          []SlackChannelID{BERKELEY},
-		4111:                          []SlackChannelID{BERKELEY},
-		4112:                          []SlackChannelID{BERKELEY},
-		ALTA_BATES_HOSPITAL_TALKGROUP: []SlackChannelID{HOSPITALS},
-		3605:                          []SlackChannelID{UCPD},
-		3606:                          []SlackChannelID{UCPD},
-		3608:                          []SlackChannelID{UCPD},
-		3609:                          []SlackChannelID{UCPD},
-		3055:                          []SlackChannelID{ALBANY},
-		3056:                          []SlackChannelID{ALBANY},
-		3057:                          []SlackChannelID{ALBANY},
-		3058:                          []SlackChannelID{ALBANY},
-		3059:                          []SlackChannelID{ALBANY},
-		2050:                          []SlackChannelID{ALBANY},
-		2055:                          []SlackChannelID{ALBANY},
-		2056:                          []SlackChannelID{ALBANY},
-		2057:                          []SlackChannelID{ALBANY},
-		2058:                          []SlackChannelID{ALBANY},
-		2059:                          []SlackChannelID{ALBANY},
-		4055:                          []SlackChannelID{ALBANY},
-		3155:                          []SlackChannelID{EMERYVILLE},
-		3156:                          []SlackChannelID{EMERYVILLE},
-		3157:                          []SlackChannelID{EMERYVILLE},
-		4155:                          []SlackChannelID{EMERYVILLE},
-		3405:                          []SlackChannelID{OAKLAND},
-		3406:                          []SlackChannelID{OAKLAND},
-		3407:                          []SlackChannelID{OAKLAND},
-		3408:                          []SlackChannelID{OAKLAND},
-		3409:                          []SlackChannelID{OAKLAND},
-		3410:                          []SlackChannelID{OAKLAND},
-		3411:                          []SlackChannelID{OAKLAND},
-		3418:                          []SlackChannelID{OAKLAND},
-		3419:                          []SlackChannelID{OAKLAND},
-		3420:                          []SlackChannelID{OAKLAND},
-		3421:                          []SlackChannelID{OAKLAND},
-		3422:                          []SlackChannelID{OAKLAND},
-		3423:                          []SlackChannelID{OAKLAND},
-		3424:                          []SlackChannelID{OAKLAND},
-		3425:                          []SlackChannelID{OAKLAND},
-		3426:                          []SlackChannelID{OAKLAND},
-		3428:                          []SlackChannelID{OAKLAND},
-		3429:                          []SlackChannelID{OAKLAND},
-		3447:                          []SlackChannelID{OAKLAND},
-		3448:                          []SlackChannelID{OAKLAND},
-		2400:                          []SlackChannelID{OAKLAND_FIRE},
-		2405:                          []SlackChannelID{OAKLAND_FIRE},
-		2406:                          []SlackChannelID{OAKLAND_FIRE},
-		2407:                          []SlackChannelID{OAKLAND_FIRE},
-		2408:                          []SlackChannelID{OAKLAND_FIRE},
-		2409:                          []SlackChannelID{OAKLAND_FIRE},
-		2410:                          []SlackChannelID{OAKLAND_FIRE},
-		2411:                          []SlackChannelID{OAKLAND_FIRE},
-		2412:                          []SlackChannelID{OAKLAND_FIRE},
-		2413:                          []SlackChannelID{OAKLAND_FIRE},
-		2414:                          []SlackChannelID{OAKLAND_FIRE},
-		2416:                          []SlackChannelID{OAKLAND_FIRE},
-		2417:                          []SlackChannelID{OAKLAND_FIRE},
-		2434:                          []SlackChannelID{OAKLAND_FIRE},
-		2436:                          []SlackChannelID{OAKLAND_FIRE},
-		4405:                          []SlackChannelID{OAKLAND},
-		4407:                          []SlackChannelID{OAKLAND},
-		4415:                          []SlackChannelID{OAKLAND},
-		4421:                          []SlackChannelID{OAKLAND},
-		4422:                          []SlackChannelID{OAKLAND},
-		4423:                          []SlackChannelID{OAKLAND},
-		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{HOSPITALS_TRAUMA}, // Childrens Hospital
-		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{HOSPITALS_TRAUMA}, // Highland Hospital
-		5516:                          []SlackChannelID{HOSPITALS},        // Summit Hospital
-		5512:                          []SlackChannelID{HOSPITALS},
+		2100:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2105:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2106:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2107:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2108:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2109:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2110:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2111:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2112:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, BERKELEY_FIRE, BERKELEY_FIRE_SECONDARY},
+		2671:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		2672:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		2691:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		2692:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		2711:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		2712:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3100:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3105:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3106:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3108:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3110:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		3112:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4100:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4105:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4106:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4107:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4108:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4109:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4110:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4111:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		4112:                          []SlackChannelID{BERKELEY, BERKELEY_SECONDARY},
+		ALTA_BATES_HOSPITAL_TALKGROUP: []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},
+		3605:                          []SlackChannelID{UCPD, UCPD_SECONDARY},
+		3606:                          []SlackChannelID{UCPD, UCPD_SECONDARY},
+		3608:                          []SlackChannelID{UCPD, UCPD_SECONDARY},
+		3609:                          []SlackChannelID{UCPD, UCPD_SECONDARY},
+		3055:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		3056:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		3057:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		3058:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		3059:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2050:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2055:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2056:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2057:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2058:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		2059:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		4055:                          []SlackChannelID{ALBANY, ALBANY_SECONDARY},
+		3155:                          []SlackChannelID{EMERYVILLE, EMERYVILLE_SECONDARY},
+		3156:                          []SlackChannelID{EMERYVILLE, EMERYVILLE_SECONDARY},
+		3157:                          []SlackChannelID{EMERYVILLE, EMERYVILLE_SECONDARY},
+		4155:                          []SlackChannelID{EMERYVILLE, EMERYVILLE_SECONDARY},
+		3405:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3406:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3407:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3408:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3409:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3410:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3411:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3418:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3419:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3420:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3421:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3422:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3423:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3424:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3425:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3426:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3428:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3429:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3447:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		3448:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		2400:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2405:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2406:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2407:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2408:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2409:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2410:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2411:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2412:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2413:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2414:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2416:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2417:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2434:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		2436:                          []SlackChannelID{OAKLAND_FIRE, OAKLAND_FIRE_SECONDARY},
+		4405:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		4407:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		4415:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		4421:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		4422:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		4423:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
+		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_SECONDARY}, // Childrens Hospital
+		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_SECONDARY}, // Highland Hospital
+		5516:                          []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},        // Summit Hospital
+		5512:                          []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},
 	}
 
-	location *time.Location
+	// Determines slack channel to send to from the passed metadata
+	channelResolver = func(meta Metadata) []SlackChannelID {
+		channels, ok := talkgroupToChannel[meta.Talkgroup]
+		if ok {
+			return channels
+		}
+
+		talkgroupGroup := strings.ToLower(meta.TalkGroupGroup)
+		talkgroupTag := strings.ToLower(meta.TalkgroupTag)
+		switch talkgroupGroup {
+		case "hospitals":
+			channels = append(channels, HOSPITALS_SECONDARY)
+		case "uc berkeley":
+			channels = append(channels, UCPD_SECONDARY)
+		case "al co sheriff":
+			channels = append(channels, ALAMEDA_COUNTY)
+		case "al co ems":
+			channels = append(channels, ALAMEDA_COUNTY_EMS)
+		case "al co fire":
+			channels = append(channels, ALAMEDA_COUNTY_FIRE)
+		case "al co services":
+			channels = append(channels, ALAMEDA_COUNTY_SERVICES)
+		case "alameda":
+			channels = append(channels, ALAMEDA)
+		case "amr (ccc)":
+			channels = append(channels, AMR_CCC)
+		case "berkeley":
+			switch talkgroupTag {
+			case "fire dispatch":
+				channels = append(channels, BERKELEY, BERKELEY_FIRE_SECONDARY)
+			default:
+				channels = append(channels, BERKELEY, BERKELEY_SECONDARY)
+			}
+		case "oakland":
+			switch talkgroupTag {
+			case "fire dispatch":
+				channels = append(channels, OAKLAND, OAKLAND_FIRE_SECONDARY)
+			default:
+				channels = append(channels, OAKLAND, OAKLAND_SECONDARY)
+			}
+		case "east bay regional park district":
+			channels = append(channels, EAST_BAY_REGIONAL_PARK)
+		case "falck ambulance":
+			channels = append(channels, FALCK_AMBULANCE)
+		case "piedmont":
+			channels = append(channels, PIEDMONT)
+		case "albany":
+			channels = append(channels, ALBANY, ALBANY_SECONDARY)
+		case "emeryville":
+			channels = append(channels, EMERYVILLE, EMERYVILLE_SECONDARY)
+		case "bart":
+			channels = append(channels, BART)
+		default:
+			log.Printf("Could not resolve channel for talkgroup: %s, %s, %d", meta.TalkGroupGroup, meta.TalkgroupTag, meta.Talkgroup)
+		}
+		return channels
+	}
 )
 
 //slack user id to keywords map
@@ -125,7 +182,7 @@ var (
 var notifsMap = map[SlackUserID][]Notifs{
 	EMILIE: []Notifs{
 		{
-			Include:  []string{"auto ped", "auto-ped", "autoped", "autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", "flock", "spikes", "challenging", "cage", "register", "1033 frank", "1033f", "1033", "10-33 frank", "pursuit", "frank"},
+			Include:  []string{"auto ped", "auto-ped", "autoped", "autobike", "auto bike", "auto bicycle", "auto-bike", "auto-bicycle", "hit and run", "1071", "GSW", "loud reports", "211", "highland", "catalytic", "apple", "261", "code 3", "10-15", "beeper", "1053", "1054", "1055", "1080", "1199", "DBF", "Code 33", "1180", "215", "220", "243", "244", "243", "288", "451", "288A", "243", "207", "212.5", "1079", "1067", "accident", "collision", "fled", "homicide", "fait", "fate", "injuries", "conscious", "responsive", "shooting", "shoot", "coroner", "weapon", "weapons", "gun", "flock", "spikes", "challenging", "beeper", "cage", "register", "1033 frank", "1033f", "1033", "10-33 frank", "pursuit", "frank"},
 			NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 			Regex:    versusRegex,
 			Channels: []SlackChannelID{BERKELEY, UCPD},

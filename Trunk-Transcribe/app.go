@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -40,6 +41,7 @@ var r2Path string = "https://pub-85c4b9a9667540e99c0109c068c47e0f.r2.dev"
 
 // slack setup
 var slackapiSecret string = os.Getenv("SLACK_API_SECRET")
+var slackapiSecretSecondary string = os.Getenv("SLACK_API_SECRET_SECONDARY")
 
 //go:embed templates/*
 var resources embed.FS
@@ -47,11 +49,13 @@ var resources embed.FS
 var t = template.Must(template.ParseFS(resources, "templates/*"))
 
 type Config struct {
-	uploader    *s3manager.Uploader
-	slackClient *slack.Client
+	uploader             *s3manager.Uploader
+	slackClient          *slack.Client
+	slackClientSecondary *slack.Client
 }
 
 var dedupeCache *lru.Cache[string, bool]
+var location *time.Location
 
 func init() {
 	var err error
@@ -73,11 +77,15 @@ func main() {
 
 	}
 
-	var api *slack.Client
+	var api, secondary *slack.Client
 	if slackapiSecret == "" {
 		log.Println("Missing SLACK_API_SECRET. Slack notifications disabled.")
 	} else {
 		api = slack.New(slackapiSecret)
+	}
+
+	if slackapiSecretSecondary != "" {
+		secondary = slack.New(slackapiSecretSecondary)
 	}
 
 	// R2 setup
@@ -92,8 +100,9 @@ func main() {
 	uploader := s3manager.NewUploader(session.New(r2Config))
 
 	config := &Config{
-		uploader:    uploader,
-		slackClient: api,
+		uploader:             uploader,
+		slackClient:          api,
+		slackClientSecondary: secondary,
 	}
 
 	ch := make(chan *TranscriptionRequest)
@@ -257,21 +266,18 @@ loop:
 		return nil, err
 	}
 
-	channels, postToSlack := talkgroupToChannel[metadata.Talkgroup]
+	channels := talkgroupToChannel[metadata.Talkgroup]
 
-	for _, channel := range channels {
-		if slices.Contains(BERKELEY_CHANNELS, channel) { // do not post Berkeley channels
-			postToSlack = false
-			break
-		}
-	}
+	channels = slices.DeleteFunc(channels, func(channel SlackChannelID) bool {
+		return slices.Contains(BERKELEY_CHANNELS, channel) // filter out Berkeley channels
+	})
 
 	request := &TranscriptionRequest{
-		Filename:     call.AudioName,
-		Data:         call.Audio,
-		Meta:         metadata,
-		PostToSlack:  postToSlack,
-		UploadToRdio: false,
+		Filename:      call.AudioName,
+		Data:          call.Audio,
+		Meta:          metadata,
+		SlackChannels: channels,
+		UploadToRdio:  false,
 	}
 
 	data, _ := call.ToJson()
@@ -303,7 +309,19 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 	filename := filepath.Base(header.Filename)
 	data, _ := ioutil.ReadAll(file)
 
-	return NewTranscriptionRequest(filename, data, callJson)
+	var metadata Metadata
+	err = json.Unmarshal(callJson, &metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TranscriptionRequest{
+		Filename:      filename,
+		Data:          data,
+		Meta:          metadata,
+		SlackChannels: channelResolver(metadata),
+		UploadToRdio:  true,
+	}, nil
 }
 
 // handleTranscriptionRequest
@@ -379,10 +397,6 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) (string, error) {
 
-	if !req.PostToSlack {
-		return "", nil
-	}
-
 	key := req.FilePath()
 	data := req.Data
 	metadata := req.Meta
@@ -407,7 +421,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	})
 
 	wg.Go(func() error {
-		return postToSlack(gctx, config, key, data, metadata)
+		return postToSlack(gctx, config, req.SlackChannels, key, data, metadata)
 	})
 
 	err = wg.Wait()
@@ -434,13 +448,13 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 	return err
 }
 
-func postToSlack(ctx context.Context, config *Config, key string, data []byte, meta Metadata) error {
-	reader := bytes.NewReader(data)
+func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelID, key string, data []byte, meta Metadata) error {
 
-	if config.slackClient == nil {
-		log.Println("Slack notifications disabled.")
+	if len(channelIDs) == 0 {
 		return nil
 	}
+
+	reader := bytes.NewReader(data)
 
 	if meta.AudioText == "" {
 		meta.AudioText = "Could not transcribe audio"
@@ -474,17 +488,13 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
 	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 
-	// determine channel
-	channelIDs, ok := talkgroupToChannel[meta.Talkgroup]
-	if !ok {
-		log.Println("Could not determine channel for talkgroup : ", meta.Talkgroup)
-		return nil
-	}
-
-	var summary *slack.FileSummary
-	var err error
-
 	for _, channelID := range channelIDs {
+
+		client := config.slackClientSecondary
+		if slices.Contains(PRIMARY_CHANNELS, channelID) {
+			client = config.slackClient
+		}
+
 		slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
 		mentions := slackMeta.Mentions
 		message := blocks
@@ -495,33 +505,21 @@ func postToSlack(ctx context.Context, config *Config, key string, data []byte, m
 		sentences := strings.Join(message, "\n")
 
 		// upload audio
-
-		if summary == nil {
-			summary, err = config.slackClient.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
-				Filename:       filepath.Base(key),
-				FileSize:       len(data),
-				Reader:         reader,
-				InitialComment: sentences,
-				Channel:        string(channelID),
-			})
-			if err != nil {
-				log.Println("Error uploading file to slack: ", err)
-				return err
-			}
-
-		} else if file, _, _, err := config.slackClient.GetFileInfo(summary.ID, 0, 0); err != nil {
-			log.Printf("Failed to get file info: %v", err)
-			return err
-		} else if _, _, err = config.slackClient.PostMessageContext(
-			ctx,
-			string(channelID),
-			slack.MsgOptionText(file.Permalink, false)); err != nil {
-			log.Println("Error posting msg to slack: ", err)
+		_, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+			Filename:       filepath.Base(key),
+			FileSize:       len(data),
+			Reader:         reader,
+			InitialComment: sentences,
+			Channel:        string(channelID),
+		})
+		if err != nil {
+			log.Println("Error uploading file to slack: ", err)
 			return err
 		}
+
 	}
 
-	return err
+	return nil
 }
 
 // uploadToRdio uploads the audio file to the radio interface: https://rdio-eastbay.fly.dev
@@ -531,15 +529,16 @@ func uploadToRdio(ctx context.Context, req *TranscriptionRequest) error {
 		return nil
 	}
 
-	filename, meta, reader := req.Filename, req.MetaRaw, bytes.NewReader(req.Data)
+	filename, meta, reader := req.Filename, req.Meta, bytes.NewReader(req.Data)
 
 	rdioScannerSecret := os.Getenv("RDIO_SCANNER_API_KEY")
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
 
+	callJson, _ := json.Marshal(meta)
 	writer.WriteField("key", rdioScannerSecret)
-	writer.WriteField("meta", string(meta))
+	writer.WriteField("meta", string(callJson))
 	writer.WriteField("system", "1000") // "eastbay" system
 	part, _ := writer.CreateFormFile("audio", filename)
 
