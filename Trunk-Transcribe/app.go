@@ -275,7 +275,8 @@ loop:
 			continue
 		}
 		channels = append(channels, channel)
-  _, transcribe |= PRIMARY_CHANNEL[channel]
+  _,  primary := PRIMARY_CHANNEL[channel]
+  transcribe = transcribe || primary
 	}
 
 	request := &TranscriptionRequest{
