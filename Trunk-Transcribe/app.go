@@ -268,11 +268,14 @@ loop:
 		return nil, err
 	}
 
-	channels := channelResolver(metadata)
-
-	channels = slices.DeleteFunc(channels, func(channel SlackChannelID) bool {
-		return slices.Contains(BERKELEY_CHANNELS, channel) // filter out Berkeley channels
-	})
+	resolved := channelResolver(metadata)
+	var channels []SlackChannelID
+	for _, channel := range resolved {
+		if slices.Contains(BERKELEY_CHANNELS, channel) { // filter out Berkeley channels
+			continue
+		}
+		channels = append(channels, channel)
+	}
 
 	request := &TranscriptionRequest{
 		Filename:      call.AudioName,
@@ -317,9 +320,14 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 		return nil, err
 	}
 
-	channels := slices.DeleteFunc(channelResolver(metadata), func(channel SlackChannelID) bool {
-		return !slices.Contains(BERKELEY_CHANNELS, channel) // filter out non-Berkeley channels
-	})
+	resolved := channelResolver(metadata)
+	var channels []SlackChannelID
+	for _, channel := range resolved {
+		if !slices.Contains(BERKELEY_CHANNELS, channel) { // filter out Berkeley channels
+			continue
+		}
+		channels = append(channels, channel)
+	}
 
 	return &TranscriptionRequest{
 		Filename:      filename,
