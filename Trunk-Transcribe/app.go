@@ -421,16 +421,22 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	data := req.Data
 	metadata := req.Meta
 
-	var err error
+	var (
+		msg      string
+		segments []string
+		err      error
+	)
 	if req.Transcribe {
-		metadata.AudioText, metadata.Segments, err = whisper(ctx, req.Data)
+		msg, segments, err = whisper(ctx, req.Data)
 	}
-	if err != nil {
-		metadata.AudioText = "Error transcribing text: " + err.Error()
+	if err == nil {
+		fmt.Println(key+": ", msg)
 	} else {
-		fmt.Println(key+": ", metadata.AudioText)
+		msg = "Error transcribing text: " + err.Error()
 	}
 
+	metadata.AudioText = msg
+	metadata.Segments = segments
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
@@ -445,7 +451,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	})
 
 	err = wg.Wait()
-	return metadata.AudioText, err
+	return msg, err
 }
 
 // transcribeAndUpload uploads the audio to S3
