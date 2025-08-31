@@ -456,8 +456,6 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		return nil
 	}
 
-	reader := bytes.NewReader(data)
-
 	if meta.AudioText == "" {
 		meta.AudioText = "Could not transcribe audio"
 	}
@@ -510,7 +508,7 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		_, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
 			Filename:       filepath.Base(key),
 			FileSize:       len(data),
-			Reader:         reader,
+			Reader:         bytes.NewReader(data),
 			InitialComment: sentences,
 			Channel:        string(channelID),
 		})
