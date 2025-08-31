@@ -79,13 +79,15 @@ func main() {
 
 	var api, secondary *slack.Client
 	if slackapiSecret == "" {
-		log.Println("Missing SLACK_API_SECRET. Slack notifications disabled.")
+		log.Fatal("Missing SLACK_API_SECRET")
 	} else {
 		api = slack.New(slackapiSecret)
 	}
 
 	if slackapiSecretSecondary != "" {
 		secondary = slack.New(slackapiSecretSecondary)
+	} else {
+		log.Fatal("Missing SLACK_API_SECRET_SECONDARY")
 	}
 
 	// R2 setup
