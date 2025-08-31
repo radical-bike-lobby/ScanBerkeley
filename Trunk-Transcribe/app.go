@@ -268,7 +268,7 @@ loop:
 		return nil, err
 	}
 
-	channels := talkgroupToChannel[metadata.Talkgroup]
+	channels := channelResolver(metadata)
 
 	channels = slices.DeleteFunc(channels, func(channel SlackChannelID) bool {
 		return slices.Contains(BERKELEY_CHANNELS, channel) // filter out Berkeley channels
