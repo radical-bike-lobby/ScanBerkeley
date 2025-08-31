@@ -267,7 +267,7 @@ loop:
 	if err != nil {
 		return nil, err
 	}
- var transcribe bool
+	var transcribe bool
 	resolved := channelResolver(metadata)
 	var channels []SlackChannelID
 	for _, channel := range resolved {
@@ -275,14 +275,14 @@ loop:
 			continue
 		}
 		channels = append(channels, channel)
-  transcribe = transcribe || slices.Contains(PRIMARY_CHANNELS, channel)
+		transcribe = transcribe || slices.Contains(PRIMARY_CHANNELS, channel)
 	}
 
 	request := &TranscriptionRequest{
 		Filename:      call.AudioName,
 		Data:          call.Audio,
 		Meta:          metadata,
-  Transcribe:    transcribe,
+		Transcribe:    transcribe,
 		SlackChannels: channels,
 		UploadToRdio:  false,
 	}
@@ -335,7 +335,7 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 		Filename:      filename,
 		Data:          data,
 		Meta:          metadata,
-  Transcribe:    true,
+		Transcribe:    true,
 		SlackChannels: channels,
 		UploadToRdio:  true,
 	}, nil
@@ -421,20 +421,16 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	data := req.Data
 	metadata := req.Meta
 
- var msg string
- var segments []string
- var err error
- if req.Transcribe {
-	  msg, segments, err = whisper(ctx, req.Data)
-}
-	if err == nil {
-		fmt.Println(key+": ", msg)
+	var err error
+	if req.Transcribe {
+		metadata.AudioText, metadata.Segments, err = whisper(ctx, req.Data)
+	}
+	if err != nil {
+		metadata.AudioText = "Error transcribing text: " + err.Error()
 	} else {
-		msg = "Error transcribing text: " + err.Error()
+		fmt.Println(key+": ", metadata.AudioText)
 	}
 
-	metadata.AudioText = msg
-	metadata.Segments = segments
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
@@ -449,7 +445,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	})
 
 	err = wg.Wait()
-	return msg, err
+	return metadata.AudioText, err
 }
 
 // transcribeAndUpload uploads the audio to S3
