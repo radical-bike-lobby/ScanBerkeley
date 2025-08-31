@@ -275,7 +275,7 @@ loop:
 			continue
 		}
 		channels = append(channels, channel)
-  transcribe = transcribe || slices.CONTAINS(PRIMARY_CHANNELS, channel)
+  transcribe = transcribe || slices.Contains(PRIMARY_CHANNELS, channel)
 	}
 
 	request := &TranscriptionRequest{
