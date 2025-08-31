@@ -270,9 +270,9 @@ loop:
 
 	channels := channelResolver(metadata)
 
-	channels = slices.DeleteFunc(channels, func(channel SlackChannelID) bool {
-		return slices.Contains(BERKELEY_CHANNELS, channel) // filter out Berkeley channels
-	})
+	// channels = slices.DeleteFunc(channels, func(channel SlackChannelID) bool {
+	// 	return slices.Contains(BERKELEY_CHANNELS, channel) // filter out Berkeley channels
+	// })
 
 	request := &TranscriptionRequest{
 		Filename:      call.AudioName,
