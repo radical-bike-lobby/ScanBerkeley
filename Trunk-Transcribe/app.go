@@ -399,6 +399,9 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
 func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) (string, error) {
 
+	if len(req.SlackChannels) == 0 {
+		return "", nil
+	}
 	key := req.FilePath()
 	data := req.Data
 	metadata := req.Meta
