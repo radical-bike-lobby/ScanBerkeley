@@ -111,9 +111,9 @@ var (
 		4421:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
 		4422:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
 		4423:                          []SlackChannelID{OAKLAND, OAKLAND_SECONDARY},
-		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_SECONDARY},        // Childrens Hospital
-		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_TRAUMA_SECONDARY}, // Highland Hospital
-		5516:                          []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},               // Summit Hospital
+		CHILDRENS_HOSPITAL_TALKGROUP:  []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_SECONDARY}, // Childrens Hospital
+		HIGHLAND_HOSPITAL_TALKGROUP:   []SlackChannelID{HOSPITALS_TRAUMA, HOSPITALS_SECONDARY}, // Highland Hospital
+		5516:                          []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},        // Summit Hospital
 		5512:                          []SlackChannelID{HOSPITALS, HOSPITALS_SECONDARY},
 	}
 
@@ -167,12 +167,8 @@ var (
 			channels = append(channels, ALBANY, ALBANY_SECONDARY)
 		case "emeryville":
 			channels = append(channels, EMERYVILLE, EMERYVILLE_SECONDARY)
-		case "hayward":
-			channels = append(channels, HAYWARD)
 		case "bart":
 			channels = append(channels, BART)
-		case "us coast guard":
-			channels = append(channels, US_COAST_GUARD)
 		default:
 			log.Printf("Could not resolve channel for talkgroup: %s, %s, %d", meta.TalkGroupGroup, meta.TalkgroupTag, meta.Talkgroup)
 		}
