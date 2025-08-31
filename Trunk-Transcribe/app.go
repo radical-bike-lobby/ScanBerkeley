@@ -317,11 +317,15 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 		return nil, err
 	}
 
+	channels := slices.DeleteFunc(channelResolver(metadata), func(channel SlackChannelID) bool {
+		return !slices.Contains(BERKELEY_CHANNELS, channel) // filter out non-Berkeley channels
+	})
+
 	return &TranscriptionRequest{
 		Filename:      filename,
 		Data:          data,
 		Meta:          metadata,
-		SlackChannels: channelResolver(metadata),
+		SlackChannels: channels,
 		UploadToRdio:  true,
 	}, nil
 }
