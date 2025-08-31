@@ -267,7 +267,7 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-
+ var transcribe bool
 	resolved := channelResolver(metadata)
 	var channels []SlackChannelID
 	for _, channel := range resolved {
@@ -275,12 +275,14 @@ loop:
 			continue
 		}
 		channels = append(channels, channel)
+  _, transcribe |= PRIMARY_CHANNEL[channel]
 	}
 
 	request := &TranscriptionRequest{
 		Filename:      call.AudioName,
 		Data:          call.Audio,
 		Meta:          metadata,
+  Transcribe:    transcribe,
 		SlackChannels: channels,
 		UploadToRdio:  false,
 	}
@@ -333,6 +335,7 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 		Filename:      filename,
 		Data:          data,
 		Meta:          metadata,
+  Transcribe:    true,
 		SlackChannels: channels,
 		UploadToRdio:  true,
 	}, nil
@@ -418,8 +421,12 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	data := req.Data
 	metadata := req.Meta
 
-	msg, segments, err := whisper(ctx, req.Data)
-
+ var msg string
+ var segments []string
+ var err error
+ if req.Transcribe {
+	  msg, segments, err = whisper(ctx, req.Data)
+}
 	if err == nil {
 		fmt.Println(key+": ", msg)
 	} else {
