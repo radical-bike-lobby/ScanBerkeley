@@ -273,6 +273,7 @@ type TranscriptionRequest struct {
 	Filename      string
 	Data          []byte
 	Meta          Metadata
+ Transcribe    bool // transcribe the audio
 	SlackChannels []SlackChannelID
 	UploadToRdio  bool // whether or not this call should be uploaded to rdio
 }
