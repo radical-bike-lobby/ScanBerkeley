@@ -371,7 +371,7 @@ func handleTranscriptionRequest(ctx context.Context, config *Config, req *Transc
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
-		_, err = transcribeAndUpload(ctx, config, req)
+		err = transcribeAndUpload(ctx, config, req)
 		wg.Done()
 		if err != nil {
 			fmt.Println("[handleTranscriptionRequest]Error transcribing and uploading to slack: ", err.Error())
@@ -412,25 +412,28 @@ func dedupeDispatch(meta Metadata) (dupe bool) {
 }
 
 // transcribeAndUpload transcribes the audio to text, posts the text to slack and persists the audio file to S3,
-func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) (string, error) {
+func transcribeAndUpload(ctx context.Context, config *Config, req *TranscriptionRequest) error {
 
-	if len(req.SlackChannels) == 0 {
-		return "", nil
-	}
 	key := req.FilePath()
 	data := req.Data
 	metadata := req.Meta
 
-	var err error
-	if req.Transcribe {
-		metadata.AudioText, metadata.Segments, err = whisper(ctx, req.Data)
-	}
-	if err != nil {
-		metadata.AudioText = "Error transcribing text: " + err.Error()
-	} else {
-		fmt.Println(key+": ", metadata.AudioText)
+	if len(req.SlackChannels) == 0 {
+		return nil
+	} else if !req.Transcribe {
+		return postToSlack(ctx, config, req.SlackChannels, key, data, metadata)
 	}
 
+	msg, segments, err := whisper(ctx, req.Data)
+
+	if err == nil {
+		fmt.Println(key+": ", msg)
+	} else {
+		msg = "Error transcribing text: " + err.Error()
+	}
+
+	metadata.AudioText = msg
+	metadata.Segments = segments
 	metadata.URL = fmt.Sprintf("https://trunk-transcribe.fly.dev/audio?link=%s", key)
 
 	wg, gctx := errgroup.WithContext(ctx)
@@ -445,7 +448,7 @@ func transcribeAndUpload(ctx context.Context, config *Config, req *Transcription
 	})
 
 	err = wg.Wait()
-	return metadata.AudioText, err
+	return err
 }
 
 // transcribeAndUpload uploads the audio to S3
@@ -503,8 +506,9 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 	// Mentions
 
 	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
-	blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
-	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
+	if meta.URL != "" {
+		blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
+	}
 
 	for _, channelID := range channelIDs {
 
