@@ -506,6 +506,7 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 	// Mentions
 
 	blocks = append([]string{"*" + meta.TalkgroupTag + "* | _" + meta.TalkGroupDesc + "_"}, blocks...)
+	blocks = append(blocks, fmt.Sprintf("%d seconds | %s", meta.CallLength, time.Now().In(location).Format("Mon, Jan 02 2006 3:04PM MST")))
 	if meta.URL != "" {
 		blocks = append(blocks, fmt.Sprintf("<%s|Audio>", meta.URL))
 	}
