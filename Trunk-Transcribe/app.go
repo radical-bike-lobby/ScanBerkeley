@@ -474,6 +474,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelID, key string, data []byte, meta Metadata) error {
 
 	if len(channelIDs) == 0 {
+		log.Println("Skipping slack post for key: " + key)
 		return nil
 	}
 
@@ -516,6 +517,9 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		client := config.slackClientSecondary
 		if slices.Contains(PRIMARY_CHANNELS, channelID) {
 			client = config.slackClient
+			log.Printf("Posting channel: %s to primary slack group", channelID)
+		} else {
+			log.Printf("Posting channel: %s to secondary slack group", channelID)
 		}
 
 		slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
@@ -528,7 +532,7 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		sentences := strings.Join(message, "\n")
 
 		// upload audio
-		_, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+		summary, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
 			Filename:       filepath.Base(key),
 			FileSize:       len(data),
 			Reader:         bytes.NewReader(data),
@@ -538,6 +542,9 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		if err != nil {
 			log.Println("Error uploading file to slack: ", err)
 			return err
+		} else {
+			b, _ := json.Marshal(summary)
+			log.Println("Sucessful post to slack: ", string(b))
 		}
 
 	}
