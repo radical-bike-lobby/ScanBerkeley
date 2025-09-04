@@ -532,7 +532,7 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		sentences := strings.Join(message, "\n")
 
 		// upload audio
-		_, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+		summary, err := client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
 			Filename:       filepath.Base(key),
 			FileSize:       len(data),
 			Reader:         bytes.NewReader(data),
@@ -542,6 +542,9 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		if err != nil {
 			log.Println("Error uploading file to slack: ", err)
 			return err
+		} else {
+			b, _ := json.Marshal(summary)
+			log.Println("Sucessful post to slack: ", string(b))
 		}
 
 	}
