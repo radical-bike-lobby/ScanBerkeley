@@ -517,6 +517,9 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 		client := config.slackClientSecondary
 		if slices.Contains(PRIMARY_CHANNELS, channelID) {
 			client = config.slackClient
+			log.Printf("Posting channel: %s to primary slack group", channelID)
+		} else {
+			log.Printf("Posting channel: %s to secondary slack group", channelID)
 		}
 
 		slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
