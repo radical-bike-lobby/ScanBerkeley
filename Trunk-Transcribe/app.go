@@ -474,6 +474,7 @@ func uploadS3(ctx context.Context, uploader *s3manager.Uploader, key string, rea
 func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelID, key string, data []byte, meta Metadata) error {
 
 	if len(channelIDs) == 0 {
+		log.Println("Skipping slack post for key: " + key)
 		return nil
 	}
 
