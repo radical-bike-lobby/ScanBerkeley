@@ -267,7 +267,7 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-	var transcribe bool
+	transcribe := true
 	resolved := channelResolver(metadata)
 	var channels []SlackChannelID
 	for _, channel := range resolved {
