@@ -163,7 +163,7 @@ var (
 		case "bart":
 			channels = append(channels, BART)
 		case "us coast guard":
-			channels = append(channels, US_COAST_GUARD)
+			channels = append(channels, US_COAST_GUARD, US_COAST_GUARD_SECONDARY)
 		default:
 			log.Printf("Could not resolve channel for talkgroup: %s, %s, %d", meta.TalkGroupGroup, meta.TalkgroupTag, meta.Talkgroup)
 		}
