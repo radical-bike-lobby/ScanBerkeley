@@ -11,7 +11,7 @@ type SlackChannelID string
 
 const (
 	UCPD             SlackChannelID = "C06J8T3EUP9"
-	BERKELEY                        = "C06A70Q40KF"
+	BERKELEY                        = "C09EZKSSDJL"
 	BERKELEY_FIRE                   = "C09BPM3A542"
 	OAKLAND                         = "C070R7LGVDY"
 	OAKLAND_FIRE                    = "C09D19L6X0Q"
