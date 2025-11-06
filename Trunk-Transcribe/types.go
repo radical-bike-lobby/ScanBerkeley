@@ -11,7 +11,7 @@ type SlackChannelID string
 
 const (
 	UCPD             SlackChannelID = "C06J8T3EUP9"
-	BERKELEY                        = "C09CPFU4NAF"
+	BERKELEY                        = "C06A70Q40KF"
 	BERKELEY_FIRE                   = "C09BPM3A542"
 	OAKLAND                         = "C070R7LGVDY"
 	OAKLAND_FIRE                    = "C09D19L6X0Q"
@@ -20,8 +20,8 @@ const (
 	HOSPITALS                       = "C09C2R5S1DH"
 	HOSPITALS_TRAUMA                = "C09BAUWEAMD"
 
-	BERKELEY_SECONDARY         = "C09EZKSSDJL"
-	BERKELEY_FIRE_SECONDARY    = "C06A28PMXFZ"
+	BERKELEY_SECONDARY         = "C06A28PMXFZ"
+	BERKELEY_FIRE_SECONDARY    = "C09CPFU4NAF"
 	UCPD_SECONDARY             = "C09CTH41F6W"
 	OAKLAND_SECONDARY          = "C09CS0HD7FX"
 	OAKLAND_FIRE_SECONDARY     = "C09CYEX1D60"
