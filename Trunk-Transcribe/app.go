@@ -325,7 +325,7 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 	resolved := channelResolver(metadata)
 	var channels []SlackChannelID
 	for _, channel := range resolved {
-		if !slices.Contains(BERKELEY_CHANNELS, channel) { // filter out Berkeley channels
+		if !slices.Contains(BERKELEY_CHANNELS, channel) { // filter out non-Berkeley channels
 			continue
 		}
 		channels = append(channels, channel)
