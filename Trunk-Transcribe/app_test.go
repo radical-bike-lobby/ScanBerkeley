@@ -121,7 +121,7 @@ func TestMentions(t *testing.T) {
         },
         {
             name:     "multi word term match",
-            sentance: "112, Tom, attach me to the 10-33, Frank, and I'm 10-9-7.",
+            sentance: "112, Tom, attach me to the 1033, Frank, and I'm 10-9-7.",
             expect:   []string{"<@U06H9NA2L4V>"},
         },
         {
