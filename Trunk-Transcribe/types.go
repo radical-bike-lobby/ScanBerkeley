@@ -86,6 +86,7 @@ const (
 	STEPHAN             = "U06UWE5EDAT"
 	HELEN               = "U08155VNVRQ"
 	TAJ                 = "U08V90KL9SS"
+	FORD                = "U09G8NFLCGK"
 )
 
 // Structures to parse json of the form:
