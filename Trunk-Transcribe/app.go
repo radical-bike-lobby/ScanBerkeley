@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime"
 	"mime/multipart"
@@ -305,7 +304,7 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 		return nil, err
 	}
 	defer js.Close()
-	callJson, _ := ioutil.ReadAll(js)
+	callJson, _ := io.ReadAll(js)
 
 	file, header, err := r.FormFile("call_audio")
 	if err != nil {
@@ -314,7 +313,7 @@ func createTranscriptionRequestFromTrunkRecorder(ctx context.Context, config *Co
 	defer file.Close()
 
 	filename := filepath.Base(header.Filename)
-	data, _ := ioutil.ReadAll(file)
+	data, _ := io.ReadAll(file)
 
 	var metadata Metadata
 	err = json.Unmarshal(callJson, &metadata)
