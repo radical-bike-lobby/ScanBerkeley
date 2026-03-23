@@ -212,7 +212,7 @@ var notifsMap = map[SlackUserID][]Notifs{
 		Channels: []SlackChannelID{BERKELEY},
 	}},
 	TAJ: []Notifs{{
-		Include:  []string{"autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "Structure Fire"},
+		Include:  []string{"autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "Structure Fire", "medic", "engine", "batallion", "truck", "ems", "utility", "prevention"},
 		Regex:    versusRegex,
 		Channels: []SlackChannelID{BERKELEY},
 	}},
