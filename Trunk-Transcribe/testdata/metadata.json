@@ -1,0 +1,20 @@
+{
+  "freq": 772393750,
+  "start_time": 1702617247,
+  "stop_time": 1702617252,
+  "emergency": 0,
+  "priority": 4,
+  "mode": 0,
+  "duplex": 0,
+  "encrypted": 0,
+  "call_length": 4,
+  "talkgroup": 3105,
+  "talkgroup_tag": "Berkeley PD1",
+  "talkgroup_description": "Police Dispatch",
+  "talkgroup_group_tag": "Law Dispatch",
+  "talkgroup_group": "Berkeley",
+  "audio_type": "digital",
+  "short_name": "Berkeley",
+  "freqList": [ {"freq": 772393750, "time": 1702617247, "pos": 0.00, "len": 2.88, "error_count": "0", "spike_count": "0"}, {"freq": 772393750, "time": 1702617251, "pos": 2.88, "len": 1.44, "error_count": "46", "spike_count": "3"} ],
+  "srcList": [ {"src": 3124119, "time": 1702617247, "pos": 0.00, "emergency": 0, "signal_system": "", "tag": ""}, {"src": 3113008, "time": 1702617251, "pos": 2.88, "emergency": 0, "signal_system": "", "tag": "Dispatch"} ]
+}
