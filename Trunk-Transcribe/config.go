@@ -180,7 +180,7 @@ var notifsMap = map[SlackUserID][]Notifs{
 			Include:  []string{"kill the beeper", "structure fire", "terminate the incident", "to sage", "to stage", "Tom unit", "10-10", "10-15", "1033", "1033 Frank", "1033F", "1053", "1054", "1055", "1067", "1071", "1071R", "1079", "1180", "1181", "1181P", "1196", "1198", "1199", "20001", "207", "211", "212.5", "215", "220", "243", "243.4", "244", "245", "261", "288", "288A", "415", "451", "accident", "asystole", "asystolic", "beeper", "bike", "bike versus", "BPD", "cage", "catalytic", "challenging", "code 3", "Code 33", "collision", "conscious", "crowd", "DBF", "demo", "detain", "fait", "fate", "fled", "flock", "GOA", "GSW", "gun", "hazmat", "highland", "homicide", "injuries", "loud reports", "PD", "pedestrian", "protest", "pulseless", "register", "responsible", "responsive", "sage", "secure", "shooting", "spikes", "stabbing", "stage", "tased", "UCPD", "versus bike", "versus ped", "weapon", "weapons", "incident terminated", "246", "417", "647i", "bomb", "hate", "LDRPT", "suscir", "susper", "susveh", "rescue", "corner", "coroner"},
 			NotRegex: regexp.MustCompile("no (weapon|gun)s?"),
 			Regex:    versusRegex,
-			Channels: []SlackChannelID{BERKELEY, UCPD},
+			Channels: []SlackChannelID{BERKELEY_SECONDARY, UCPD},
 		},
 		{
 			Include: []string{"trauma", "trauma activation"},
@@ -189,12 +189,12 @@ var notifsMap = map[SlackUserID][]Notifs{
 	NAVEEN: []Notifs{{
 		Include:  []string{"hit and run", "auto ped", "auto-ped", "autoped", "autobike", "auto bicycle", "auto-bike", "auto-bicycle", "Rose St", "Rose Street", "Ruth Acty", "King Middle"},
 		Regex:    versusRegex,
-		Channels: []SlackChannelID{BERKELEY, UCPD, ALBANY, EMERYVILLE},
+		Channels: []SlackChannelID{BERKELEY, BERKELEY_SECONDARY, UCPD, ALBANY, EMERYVILLE},
 	}},
 	MARC: []Notifs{{
 		Include:  []string{"hit and run", "autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped"},
 		Regex:    versusRegex,
-		Channels: []SlackChannelID{BERKELEY, UCPD},
+		Channels: []SlackChannelID{BERKELEY_SECONDARY, BERKELEY_SECONDARY, UCPD},
 	}},
 	JOSE: []Notifs{{
 		Include:  []string{"accident", "collision", "crash", "crashed", "crashes"},
@@ -214,11 +214,11 @@ var notifsMap = map[SlackUserID][]Notifs{
 	TAJ: []Notifs{{
 		Include:  []string{"autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "Structure Fire", "medic", "engine", "batallion", "truck", "ems", "utility", "prevention"},
 		Regex:    versusRegex,
-		Channels: []SlackChannelID{BERKELEY},
+		Channels: []SlackChannelID{BERKELEY_SECONDARY},
 	}},
 	FORD: []Notifs{{
 		Include:  []string{"autobike", "auto bike", "auto bicycle", "auto bicyclist", "auto ped", "auto-ped", "autoped", "Structure Fire"},
 		Regex:    versusRegex,
-		Channels: []SlackChannelID{BERKELEY},
+		Channels: []SlackChannelID{BERKELEY_SECONDARY},
 	}}, 
 }
