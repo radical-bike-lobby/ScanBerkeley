@@ -52,6 +52,8 @@ type Config struct {
 	uploader             *s3manager.Uploader
 	slackClient          *slack.Client
 	slackClientSecondary *slack.Client
+	r2Session            *session.Session
+	keywords             *KeywordsStore
 }
 
 var dedupeCache *lru.Cache[string, bool]
@@ -99,12 +101,18 @@ func main() {
 		Credentials: credentials.NewStaticCredentials(r2Key, r2Secret, ""),
 		Endpoint:    aws.String(endpoint),
 	}
-	uploader := s3manager.NewUploader(session.New(r2Config))
+	sess := session.New(r2Config)
+	uploader := s3manager.NewUploader(sess)
+
+	ks := newKeywordsStore()
+	ks.LoadFromR2(context.Background(), sess)
 
 	config := &Config{
 		uploader:             uploader,
 		slackClient:          api,
 		slackClientSecondary: secondary,
+		r2Session:            sess,
+		keywords:             ks,
 	}
 
 	ch := make(chan *TranscriptionRequest)
@@ -205,6 +213,8 @@ func mux(config *Config, ch chan *TranscriptionRequest) *http.ServeMux {
 		}
 		ch <- req
 	})
+
+	mux.HandleFunc("/keywords", basicAuth(keywordsHandler(config)))
 
 	mux.HandleFunc("/transcribe/api/call-upload", func(w http.ResponseWriter, r *http.Request) {
 		defer http.ServeContent(w, r, "", time.Now(), strings.NewReader("ok"))
@@ -522,7 +532,7 @@ func postToSlack(ctx context.Context, config *Config, channelIDs []SlackChannelI
 			log.Printf("Posting channel: %s to secondary slack group", channelID)
 		}
 
-		slackMeta := ExtractSlackMeta(meta, channelID, notifsMap)
+		slackMeta := ExtractSlackMeta(meta, channelID, config.keywords.MergedNotifsMap())
 		mentions := slackMeta.Mentions
 		message := blocks
 		if str := strings.Join(mentions, " "); len(str) > 0 {
@@ -646,4 +656,55 @@ func ExtractSlackMeta(meta Metadata, channelID SlackChannelID, notifsMap map[Sla
 func writeErr(w http.ResponseWriter, err error) {
 	fmt.Println("Error: ", err.Error())
 	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+func basicAuth(next http.HandlerFunc) http.HandlerFunc {
+	secret := os.Getenv("KEYWORDS_SECRET")
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, password, ok := r.BasicAuth()
+		if !ok || password != secret {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Keywords Editor"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func keywordsHandler(config *Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Bad request", http.StatusBadRequest)
+				return
+			}
+			userID := SlackUserID(r.FormValue("user_id"))
+			var keywords []string
+			for _, k := range strings.Split(r.FormValue("keywords"), "\n") {
+				k = strings.TrimSpace(k)
+				if k != "" {
+					keywords = append(keywords, k)
+				}
+			}
+			var channels []SlackChannelID
+			for _, ch := range r.Form["channels"] {
+				channels = append(channels, SlackChannelID(ch))
+			}
+			config.keywords.Set(userID, UserNotifConfig{
+				Keywords: keywords,
+				Channels: channels,
+			})
+			if err := config.keywords.SaveToR2(r.Context(), config.uploader); err != nil {
+				log.Printf("Error saving keywords to R2: %v", err)
+				http.Error(w, "Error saving keywords", http.StatusInternalServerError)
+				return
+			}
+			http.Redirect(w, r, "/keywords?saved="+string(userID), http.StatusSeeOther)
+
+		default: // GET
+			data := buildKeywordsTemplateData(config.keywords, r.URL.Query().Get("saved"))
+			t.ExecuteTemplate(w, "keywords.html.tmpl", data)
+		}
+	}
 }

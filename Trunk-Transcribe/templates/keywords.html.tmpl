@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Keywords Editor</title>
+<style>
+body { font-family: sans-serif; max-width: 920px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; color: #333; }
+h1 { margin-bottom: 24px; }
+.banner { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 0.95em; }
+.user-form { background: white; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.user-form h2 { margin-top: 0; font-size: 1.05em; color: #444; }
+.field-label { display: block; margin-bottom: 4px; font-size: 0.85em; font-weight: bold; color: #555; }
+textarea { width: 100%; height: 100px; font-family: monospace; font-size: 0.82em; border: 1px solid #ccc; border-radius: 4px; padding: 8px; box-sizing: border-box; resize: vertical; margin-bottom: 14px; }
+.channels { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 16px; }
+.channel-label { display: flex; align-items: center; gap: 5px; font-size: 0.85em; cursor: pointer; }
+.save-btn { background: #0066cc; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+.save-btn:hover { background: #0052a3; }
+</style>
+</head>
+<body>
+<h1>Keywords Editor</h1>
+{{if .SavedName}}<div class="banner">Saved keywords for <strong>{{.SavedName}}</strong>.</div>{{end}}
+{{range .Users}}
+{{$user := .}}
+<div class="user-form">
+  <h2>{{.DisplayName}}</h2>
+  <form method="POST" action="/keywords">
+    <input type="hidden" name="user_id" value="{{.ID}}">
+    <label class="field-label">Keywords (one per line):</label>
+    <textarea name="keywords">{{.Keywords}}</textarea>
+    <label class="field-label">Channels:</label>
+    <div class="channels">
+      {{range $.Channels}}
+      <label class="channel-label">
+        <input type="checkbox" name="channels" value="{{.ID}}"{{if index $user.ChannelSelected .ID}} checked{{end}}>
+        {{.DisplayName}}
+      </label>
+      {{end}}
+    </div>
+    <button type="submit" class="save-btn">Save</button>
+  </form>
+</div>
+{{end}}
+</body>
+</html>
